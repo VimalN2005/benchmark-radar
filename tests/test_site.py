@@ -1290,10 +1290,13 @@ def test_expanded_card_deduplication_issue_908():
     assert "`${item.source} · ${eventVerb(item)} · ${categoryLine}`" not in script
 
     # Rule 5: Score breakdown heading present without repeating total priority
-    assert 't("Score breakdown")' in script
+    assert 't(isAttention ? "Activity breakdown" : "Score breakdown")' in script
 
     # Rule 3: Description clean helper strips redundant title and HF link boilerplate
     assert "function cleanCardSummary(summary, title)" in script
+
+    # Rule 4: Retains original Published date when updated meaningfully differs
+    assert '[t("Published"), formatDate(item.published_at, { dateStyle: "medium" })]' in script
 
     # Rule 6: Formatted rationale fixes stemmer leak and avoids duplicate metadata
     assert "function formatCardRationale(rationaleList, item)" in script

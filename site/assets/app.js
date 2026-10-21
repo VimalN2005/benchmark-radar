@@ -1151,6 +1151,7 @@ const I18N = {
     "Read full card ↗": "阅读完整模型卡 ↗",
     "Open on Hugging Face ↗": "在 Hugging Face 打开 ↗",
     "Score breakdown": "得分明细",
+    "Activity breakdown": "活动明细",
     "no likes or downloads yet": "暂无点赞或下载",
     "in title and description": "在标题和描述中",
     Recency: "新鲜度",
@@ -4227,7 +4228,22 @@ function formatCardRationale(rationaleList, item) {
 function expandedRecord(item, teaser) {
   const isAttention = item.observation_kind === "attention";
   const primaryArtifact = item.primary_artifact_url || item.artifact_urls?.[0];
-  const cleanedSummary = cleanCardSummary(item.summary, item.title);
+  const max = Number(scoreMax(item));
+  const precision = max > 10 ? 0 : 2;
+  const formatScore = (val) => Number(val || 0).toFixed(precision);
+
+  const metrics = item.metrics || {};
+  let adoptionDisplay = formatScore(item.adoption_score);
+  if (
+    Number(item.adoption_score || 0) === 0
+    && item.source === "Hugging Face"
+    && Number(metrics.likes || 0) === 0
+    && Number(metrics.downloads || 0) === 0
+    && Object.keys(metrics).length > 0
+  ) {
+    adoptionDisplay = `${adoptionDisplay} · ${t("no likes or downloads yet")}`;
+  }
+
   const scoreEntries = isAttention
     ? [
         [
@@ -4238,19 +4254,14 @@ function expandedRecord(item, teaser) {
         [t("Submissions"), Number(item.metrics?.submissions ?? 1).toLocaleString()],
       ]
     : [
-        [t("Relevance"), Math.round(Number(item.relevance_score || 0))],
-        [t("Evidence"), Math.round(Number(item.evidence_score || 0))],
-        [t("Recency"), Math.round(Number(item.recency_score || 0))],
-        [
-          t("Adoption"),
-          Number(item.adoption_score || 0) === 0
-            ? `${Math.round(Number(item.adoption_score || 0))} · ${t("no likes or downloads yet")}`
-            : Math.round(Number(item.adoption_score || 0)),
-        ],
+        [t("Relevance"), formatScore(item.relevance_score)],
+        [t("Evidence"), formatScore(item.evidence_score)],
+        [t("Recency"), formatScore(item.recency_score)],
+        [t("Adoption"), adoptionDisplay],
       ];
 
   if (meaningfulDateDifference(item.published_at, item.updated_at)) {
-    scoreEntries.push([t("Updated"), formatDate(item.updated_at, { dateStyle: "medium" })]);
+    scoreEntries.push([t("Published"), formatDate(item.published_at, { dateStyle: "medium" })]);
   }
 
   const cleanedRationale = formatCardRationale(item.rationale || [], item);
@@ -4295,12 +4306,14 @@ function expandedRecord(item, teaser) {
           ),
         ])
       : null;
+
+  const isZh = getLang() === "zh";
   const actionLabel = isAttention
     ? t("Open public discussion ↗")
     : item.source === "Hugging Face"
       ? t("Open on Hugging Face ↗") || t("Read full card ↗")
       : item.source
-        ? `${t("Open on")} ${item.source} ↗`
+        ? (isZh ? `在 ${item.source} 打开 ↗` : `Open on ${item.source} ↗`)
         : t("Open primary source ↗");
   const links = element("div", { className: "detail-links" }, [
     ...(isAttention && safeHttpUrl(primaryArtifact)
@@ -4323,18 +4336,20 @@ function expandedRecord(item, teaser) {
     }),
   ]);
 
+  const hasRawSummary = Boolean((item.summary || "").trim());
   const remainder = summaryRemainder(item.summary, teaser);
   const displaySummary = cleanCardSummary(remainder, item.title);
+  const summaryText = hasRawSummary
+    ? displaySummary || t("No further description beyond the preview above.")
+    : t("No description published at the source.");
 
   return element("div", { className: "record-detail" }, [
     element("p", {
-      className: displaySummary ? "detail-summary" : "detail-summary signal-nodesc",
-      text: displaySummary
-        ? displaySummary
-        : t("No description published at the source."),
+      className: hasRawSummary ? "detail-summary" : "detail-summary signal-nodesc",
+      text: summaryText,
     }),
     attentionNotice,
-    element("h3", { text: t("Score breakdown") }),
+    element("h3", { text: t(isAttention ? "Activity breakdown" : "Score breakdown") }),
     element(
       "dl",
       { className: "detail-grid" },
