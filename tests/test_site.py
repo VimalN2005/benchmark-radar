@@ -1282,6 +1282,23 @@ def test_expanded_detail_continues_past_the_teaser_instead_of_repeating_it():
     assert 'expandedRecord(item, (item.summary || "").trim() ? summary : "")' in script
 
 
+def test_expanded_card_deduplication_issue_908():
+    """Issue #908: ensure expanded card avoids duplicate facts and respects single-zone rules."""
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+
+    # Rule 2: detail-source meta line removed from expanded record to prevent repeating header
+    assert "`${item.source} · ${eventVerb(item)} · ${categoryLine}`" not in script
+
+    # Rule 5: Score breakdown heading present without repeating total priority
+    assert 't("Score breakdown")' in script
+
+    # Rule 3: Description clean helper strips redundant title and HF link boilerplate
+    assert "function cleanCardSummary(summary, title)" in script
+
+    # Rule 6: Formatted rationale fixes stemmer leak and avoids duplicate metadata
+    assert "function formatCardRationale(rationaleList, item)" in script
+
+
 def test_trend_map_is_keyboard_accessible_and_coordinates_today_filters():
     html = Path("site/index.html").read_text(encoding="utf-8")
     script = Path("site/assets/app.js").read_text(encoding="utf-8")

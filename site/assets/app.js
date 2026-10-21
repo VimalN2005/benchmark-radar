@@ -1149,6 +1149,10 @@ const I18N = {
     Published: "发布",
     "Radar first observed": "雷达首次观察到",
     "Read full card ↗": "阅读完整模型卡 ↗",
+    "Open on Hugging Face ↗": "在 Hugging Face 打开 ↗",
+    "Score breakdown": "得分明细",
+    "no likes or downloads yet": "暂无点赞或下载",
+    "in title and description": "在标题和描述中",
     Recency: "新鲜度",
     Released: "发布于",
     Relevance: "相关性",
@@ -4150,11 +4154,80 @@ function openRubric(item = null, versionOverride = null, updateUrl = true) {
   showModalDialog(dialog);
 }
 
+function meaningfulDateDifference(d1, d2) {
+  if (!d1 || !d2) return false;
+  const t1 = new Date(d1).getTime();
+  const t2 = new Date(d2).getTime();
+  if (Number.isNaN(t1) || Number.isNaN(t2)) return false;
+  return Math.abs(t2 - t1) > 24 * 60 * 60 * 1000;
+}
+
+function cleanCardSummary(summary, title) {
+  if (!summary) return "";
+  let text = summary.trim();
+  if (title) {
+    const cleanTitle = title.trim();
+    if (text.toLowerCase().startsWith(cleanTitle.toLowerCase())) {
+      text = text.slice(cleanTitle.length).replace(/^[:\s\-—]+/, "").trim();
+    }
+    const namePart = cleanTitle.split("/").pop().trim();
+    if (namePart && text.toLowerCase().startsWith(namePart.toLowerCase())) {
+      text = text.slice(namePart.length).replace(/^[:\s\-—]+/, "").trim();
+    }
+  }
+  text = text.replace(/See (?:the )?full description on the (?:dataset|model) page:\s*https?:\/\/\S+/gi, "").trim();
+  return text;
+}
+
+function formatCardRationale(rationaleList, item) {
+  if (!Array.isArray(rationaleList) || !rationaleList.length) return [];
+  const stemMap = {
+    evaluat: "evaluation",
+    bench: "benchmark",
+    reason: "reasoning",
+    dataset: "dataset",
+    model: "model",
+  };
+  const categories = new Set((item.categories || []).map((c) => String(c).toLowerCase()));
+  const formatted = [];
+
+  for (const reason of rationaleList) {
+    const str = String(reason || "").trim();
+    if (!str) continue;
+
+    if (str.startsWith("Primary record:")) {
+      const hasMultipleSources = (item.contributing_sources || []).length > 1;
+      if (!hasMultipleSources) continue;
+      formatted.push(str.replace("Primary record:", t("Primary record:")));
+      continue;
+    }
+
+    if (str.startsWith("Matched:")) {
+      const rawTerms = str
+        .slice("Matched:".length)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const nonCategoryTerms = rawTerms.filter((term) => !categories.has(term));
+      const cleanTerms = (nonCategoryTerms.length ? nonCategoryTerms : rawTerms).map(
+        (term) => stemMap[term] || term,
+      );
+      const uniqueTerms = [...new Set(cleanTerms)];
+      if (uniqueTerms.length) {
+        formatted.push(`${t("Matched")} "${uniqueTerms.join('", "')}" ${t("in title and description")}`);
+      }
+      continue;
+    }
+
+    formatted.push(str);
+  }
+  return formatted;
+}
+
 function expandedRecord(item, teaser) {
   const isAttention = item.observation_kind === "attention";
   const primaryArtifact = item.primary_artifact_url || item.artifact_urls?.[0];
-  const sourceFacts = recordFactEntries(item);
-  const sourceDates = recordDateEntries(item);
+  const cleanedSummary = cleanCardSummary(item.summary, item.title);
   const scoreEntries = isAttention
     ? [
         [
@@ -4163,24 +4236,32 @@ function expandedRecord(item, teaser) {
         ],
         [t("Comments"), Number(item.metrics?.comments || 0).toLocaleString()],
         [t("Submissions"), Number(item.metrics?.submissions ?? 1).toLocaleString()],
-        [t("Published"), formatDate(item.published_at, { dateStyle: "medium" })],
       ]
     : [
-        [t("Priority"), Number(item.total_score || 0).toFixed(2)],
-        [t("Relevance"), Number(item.relevance_score || 0).toFixed(2)],
-        [t("Evidence"), Number(item.evidence_score || 0).toFixed(2)],
-        [t("Recency"), Number(item.recency_score || 0).toFixed(2)],
-        // Adoption is weighted into the total, so hiding it here left the
-        // four shown components unable to explain the priority above them.
-        [t("Adoption"), Number(item.adoption_score || 0).toFixed(2)],
-        ...sourceDates,
-        ...sourceFacts,
+        [t("Relevance"), Math.round(Number(item.relevance_score || 0))],
+        [t("Evidence"), Math.round(Number(item.evidence_score || 0))],
+        [t("Recency"), Math.round(Number(item.recency_score || 0))],
+        [
+          t("Adoption"),
+          Number(item.adoption_score || 0) === 0
+            ? `${Math.round(Number(item.adoption_score || 0))} · ${t("no likes or downloads yet")}`
+            : Math.round(Number(item.adoption_score || 0)),
+        ],
       ];
-  const rationale = element(
-    "ul",
-    { className: "rationale-list" },
-    (item.rationale || []).map((reason) => element("li", { text: reason })),
-  );
+
+  if (meaningfulDateDifference(item.published_at, item.updated_at)) {
+    scoreEntries.push([t("Updated"), formatDate(item.updated_at, { dateStyle: "medium" })]);
+  }
+
+  const cleanedRationale = formatCardRationale(item.rationale || [], item);
+  const rationale = cleanedRationale.length
+    ? element(
+        "ul",
+        { className: "rationale-list" },
+        cleanedRationale.map((reason) => element("li", { text: reason })),
+      )
+    : null;
+
   const attentionNotice = isAttention
     ? element("div", { className: "attention-notice" }, [
         element("strong", { text: t("Not quality-scored") }),
@@ -4214,6 +4295,13 @@ function expandedRecord(item, teaser) {
           ),
         ])
       : null;
+  const actionLabel = isAttention
+    ? t("Open public discussion ↗")
+    : item.source === "Hugging Face"
+      ? t("Open on Hugging Face ↗") || t("Read full card ↗")
+      : item.source
+        ? `${t("Open on")} ${item.source} ↗`
+        : t("Open primary source ↗");
   const links = element("div", { className: "detail-links" }, [
     ...(isAttention && safeHttpUrl(primaryArtifact)
       ? [
@@ -4230,40 +4318,31 @@ function expandedRecord(item, teaser) {
       : []),
     element("a", {
       className: isAttention ? "secondary-link" : "primary-link",
-      text: isAttention
-        ? t("Open public discussion ↗")
-        : item.source === "Hugging Face"
-          ? t("Read full card ↗")
-          : t("Open primary source ↗"),
+      text: actionLabel,
       attrs: { href: safeHttpUrl(item.url), target: "_blank", rel: "noopener noreferrer" },
     }),
   ]);
-  const categoryLine = (item.categories || []).length
-    ? (item.categories || []).map(titleCase).join(" · ")
-    : t("uncategorized");
+
+  const remainder = summaryRemainder(item.summary, teaser);
+  const displaySummary = cleanCardSummary(remainder, item.title);
+
   return element("div", { className: "record-detail" }, [
     element("p", {
-      className: "detail-source",
-      text:
-        `${item.source} · ${eventVerb(item)} · ${categoryLine}` +
-        `${item.watchlist ? ` · ★ ${item.watchlist}` : ""} · ${item.snapshot_date}`,
-    }),
-    element("p", {
-      className: item.summary ? "detail-summary" : "detail-summary signal-nodesc",
-      text: item.summary
-        ? teaser
-          ? summaryRemainder(item.summary, teaser) || t("No further description beyond the preview above.")
-          : item.summary
+      className: displaySummary ? "detail-summary" : "detail-summary signal-nodesc",
+      text: displaySummary
+        ? displaySummary
         : t("No description published at the source."),
     }),
     attentionNotice,
+    element("h3", { text: t("Score breakdown") }),
     element(
       "dl",
       { className: "detail-grid" },
       scoreEntries.map(([label, value]) => definition(label, value)),
     ),
-    element("h3", { text: t("Why surfaced") }),
-    rationale,
+    ...(rationale
+      ? [element("h3", { text: t("Why surfaced") }), rationale]
+      : []),
     supporting,
     isAttention
       ? element("p", {
