@@ -3349,3 +3349,32 @@ def test_model_filter_controls_and_status_have_chinese_translations():
         "文档发布日期",
         "搜索全部 benchmark（暂不按分数筛选）",
     ]
+
+
+def test_observation_card_deterministic_layout_plan():
+    """Verify deterministic card layout matching Koutian Wu's design rules."""
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    styles = Path("site/assets/styles.css").read_text(encoding="utf-8")
+
+    # 1. Benchmark name directly clickable link
+    assert "benchmark-title-link" in script
+    assert ".benchmark-title-link" in styles
+
+    # 2. Author handle directly below title
+    assert "record-author" in script
+    assert ".record-author" in styles
+
+    # 3. Stars / likes, date, platform metadata line
+    assert "record-meta-line" in script
+    assert "record-engagement" in script
+    assert ".record-meta-line" in styles
+
+    # 4. What is inside: contents extractor & search match
+    assert "function extractAvailableContents(item)" in script
+    assert "function extractSearchMatchLine(rationaleList)" in script
+
+    # 5. Overall score and score breakdown collapsed behind Score details
+    assert "score-details" in script
+    assert ".score-details" in styles
+    assert 't("Score details")' in script
+

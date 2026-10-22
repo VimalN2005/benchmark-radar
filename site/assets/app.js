@@ -434,6 +434,14 @@ const I18N = {
     "Browse them in the Library": "在 Library 中查看",
     "Search models": "搜索模型",
     "Score details": "成绩详情",
+    "Contents": "包含内容",
+    "dataset": "数据集",
+    "evaluation code": "评测代码",
+    "checkpoints": "权重检查点",
+    "results": "评测结果",
+    "stars": "星标",
+    "likes": "点赞",
+    "Matches your search:": "匹配您的搜索：",
     "Model name": "模型名",
     "Lab": "实验室",
     "Previous": "上一页",
@@ -4225,24 +4233,68 @@ function formatCardRationale(rationaleList, item) {
   return formatted;
 }
 
+function extractAvailableContents(item) {
+  const categories = (item.categories || []).map((c) => String(c).toLowerCase());
+  const tags = (item.source_tags || []).map((t) => String(t).toLowerCase());
+  const combined = new Set([...categories, ...tags]);
+  const contents = [];
+
+  if (combined.has("dataset") || combined.has("datasets") || categories.some((c) => c.includes("data"))) {
+    contents.push(t("dataset"));
+  }
+  if (combined.has("evaluation") || combined.has("benchmark") || categories.some((c) => c.includes("eval") || c.includes("bench"))) {
+    contents.push(t("evaluation code"));
+  }
+  if (combined.has("checkpoints") || combined.has("weights") || combined.has("model") || categories.some((c) => c.includes("checkpoint") || c.includes("model"))) {
+    contents.push(t("checkpoints"));
+  }
+  if (combined.has("results") || combined.has("metrics") || categories.some((c) => c.includes("result") || c.includes("metric"))) {
+    contents.push(t("results"));
+  }
+
+  if (Array.isArray(item.contents) && item.contents.length) {
+    for (const c of item.contents) {
+      const label = t(String(c).toLowerCase());
+      if (!contents.includes(label)) contents.push(label);
+    }
+  }
+
+  return contents;
+}
+
+function extractSearchMatchLine(rationaleList) {
+  if (!Array.isArray(rationaleList) || !rationaleList.length) return "";
+  const stemMap = {
+    evaluat: "evaluation",
+    bench: "benchmark",
+    reason: "reasoning",
+    dataset: "dataset",
+    model: "model",
+  };
+  for (const reason of rationaleList) {
+    const str = String(reason || "").trim();
+    if (str.startsWith("Matched:")) {
+      const terms = str
+        .slice("Matched:".length)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+        .map((term) => stemMap[term] || term);
+      const unique = [...new Set(terms)];
+      if (unique.length) {
+        return `${t("Matches your search:")} "${unique.join('", "')}"`;
+      }
+    }
+  }
+  return "";
+}
+
 function expandedRecord(item, teaser) {
   const isAttention = item.observation_kind === "attention";
   const primaryArtifact = item.primary_artifact_url || item.artifact_urls?.[0];
   const max = Number(scoreMax(item));
   const precision = max > 10 ? 0 : 2;
   const formatScore = (val) => Number(val || 0).toFixed(precision);
-
-  const metrics = item.metrics || {};
-  let adoptionDisplay = formatScore(item.adoption_score);
-  if (
-    Number(item.adoption_score || 0) === 0
-    && item.source === "Hugging Face"
-    && Number(metrics.likes || 0) === 0
-    && Number(metrics.downloads || 0) === 0
-    && Object.keys(metrics).length > 0
-  ) {
-    adoptionDisplay = `${adoptionDisplay} · ${t("no likes or downloads yet")}`;
-  }
 
   const scoreEntries = isAttention
     ? [
@@ -4254,24 +4306,16 @@ function expandedRecord(item, teaser) {
         [t("Submissions"), Number(item.metrics?.submissions ?? 1).toLocaleString()],
       ]
     : [
-        [t("Relevance"), formatScore(item.relevance_score)],
-        [t("Evidence"), formatScore(item.evidence_score)],
-        [t("Recency"), formatScore(item.recency_score)],
-        [t("Adoption"), adoptionDisplay],
+        [t("Priority"), Number(item.total_score || 0).toFixed(precision)],
+        [t("Relevance"), Number(item.relevance_score || 0).toFixed(precision)],
+        [t("Evidence"), Number(item.evidence_score || 0).toFixed(precision)],
+        [t("Recency"), Number(item.recency_score || 0).toFixed(precision)],
+        [t("Adoption"), Number(item.adoption_score || 0).toFixed(precision)],
       ];
 
   if (meaningfulDateDifference(item.published_at, item.updated_at)) {
     scoreEntries.push([t("Published"), formatDate(item.published_at, { dateStyle: "medium" })]);
   }
-
-  const cleanedRationale = formatCardRationale(item.rationale || [], item);
-  const rationale = cleanedRationale.length
-    ? element(
-        "ul",
-        { className: "rationale-list" },
-        cleanedRationale.map((reason) => element("li", { text: reason })),
-      )
-    : null;
 
   const attentionNotice = isAttention
     ? element("div", { className: "attention-notice" }, [
@@ -4281,6 +4325,7 @@ function expandedRecord(item, teaser) {
         }),
       ])
     : null;
+
   const supporting =
     isAttention && item.supporting_observations?.length
       ? element("section", { className: "supporting-signals" }, [
@@ -4307,34 +4352,25 @@ function expandedRecord(item, teaser) {
         ])
       : null;
 
-  const isZh = getLang() === "zh";
-  const actionLabel = isAttention
-    ? t("Open public discussion ↗")
-    : item.source === "Hugging Face"
-      ? t("Open on Hugging Face ↗") || t("Read full card ↗")
-      : item.source
-        ? (isZh ? `在 ${item.source} 打开 ↗` : `Open on ${item.source} ↗`)
-        : t("Open primary source ↗");
-  const links = element("div", { className: "detail-links" }, [
-    ...(isAttention && safeHttpUrl(primaryArtifact)
-      ? [
-          element("a", {
-            className: "primary-link",
-            text: t("Open primary artifact ↗"),
-            attrs: {
-              href: safeHttpUrl(primaryArtifact),
-              target: "_blank",
-              rel: "noopener noreferrer",
-            },
-          }),
-        ]
-      : []),
-    element("a", {
-      className: isAttention ? "secondary-link" : "primary-link",
-      text: actionLabel,
-      attrs: { href: safeHttpUrl(item.url), target: "_blank", rel: "noopener noreferrer" },
-    }),
-  ]);
+  // Title is the primary source link; redundant bottom button is removed.
+  // We keep actionLabel for accessibility / compatibility.
+  const actionLabel = item.source === "Hugging Face"
+    ? t("Read full card ↗")
+    : t("Open primary source ↗");
+
+  const attentionLinks = isAttention && safeHttpUrl(primaryArtifact)
+    ? element("div", { className: "detail-links" }, [
+        element("a", {
+          className: "primary-link",
+          text: t("Open primary artifact ↗"),
+          attrs: {
+            href: safeHttpUrl(primaryArtifact),
+            target: "_blank",
+            rel: "noopener noreferrer",
+          },
+        }),
+      ])
+    : null;
 
   const hasRawSummary = Boolean((item.summary || "").trim());
   const remainder = summaryRemainder(item.summary, teaser);
@@ -4343,21 +4379,30 @@ function expandedRecord(item, teaser) {
     ? displaySummary || t("No further description beyond the preview above.")
     : t("No description published at the source.");
 
+  const scoreAccordion = element("details", { className: "score-details" }, [
+    element("summary", { className: "score-details-toggle" }, [
+      element("span", { className: "score-details-title", text: t("Score details") }),
+    ]),
+    element("div", { className: "score-details-content" }, [
+      element("div", { className: "score-overall-section" }, [
+        isAttention ? attentionActivity(item) : scoreBlock(item),
+      ]),
+      element("h3", { text: t(isAttention ? "Activity breakdown" : "Score breakdown") }),
+      element(
+        "dl",
+        { className: "detail-grid" },
+        scoreEntries.map(([label, value]) => definition(label, value)),
+      ),
+    ]),
+  ]);
+
   return element("div", { className: "record-detail" }, [
     element("p", {
       className: hasRawSummary ? "detail-summary" : "detail-summary signal-nodesc",
       text: summaryText,
     }),
     attentionNotice,
-    element("h3", { text: t(isAttention ? "Activity breakdown" : "Score breakdown") }),
-    element(
-      "dl",
-      { className: "detail-grid" },
-      scoreEntries.map(([label, value]) => definition(label, value)),
-    ),
-    ...(rationale
-      ? [element("h3", { text: t("Why surfaced") }), rationale]
-      : []),
+    scoreAccordion,
     supporting,
     isAttention
       ? element("p", {
@@ -4367,7 +4412,7 @@ function expandedRecord(item, teaser) {
             `${t("Radar first observed")} ${formatDate(item.observed_at, { dateStyle: "medium", timeStyle: "short" })} UTC`,
         })
       : null,
-    links,
+    attentionLinks,
   ]);
 }
 
@@ -10148,50 +10193,136 @@ function attentionActivity(item) {
 
 function observationCard(item, index) {
   const isAttention = item.observation_kind === "attention";
-  const metadata = isAttention
-    ? element("div", { className: "signal-meta" }, [
-        element("span", { className: "attention-badge", text: t("attention") }),
-        element("span", {
-          text: `${item.source} · ${eventVerb(item)}`,
-          // The relative time on the row carries the exact timestamp on
-          // hover, matching the evidence rows (issue #248).
-          attrs: {
-            title: eventTimestamp(item)
-              ? `${formatDate(eventTimestamp(item), { dateStyle: "medium", timeStyle: "short" })} UTC`
-              : "",
-          },
-        }),
+
+  // 1. Benchmark name: Large, bold, directly clickable title linking to the source.
+  // Use explicit benchmark-name field when available; otherwise use repository name / item.title.
+  const benchmarkName = item["benchmark-name"] || item.benchmark_name || item.title;
+  const isZh = getLang() === "zh";
+  const actionLabel = isAttention
+    ? t("Open public discussion ↗")
+    : item.source === "Hugging Face"
+      ? t("Read full card ↗")
+      : item.source
+        ? (isZh ? `在 ${item.source} 打开 ↗` : `Open on ${item.source} ↗`)
+        : t("Open primary source ↗");
+
+  const titleLink = element("a", {
+    className: "benchmark-title-link",
+    text: benchmarkName,
+    attrs: {
+      href: safeHttpUrl(item.url),
+      target: "_blank",
+      rel: "noopener noreferrer",
+      "aria-label": `${benchmarkName} (${actionLabel})`,
+    },
+  });
+  titleLink.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+  const headingTitle = element("h3", { className: "record-title" }, [titleLink]);
+
+  // 2. Author / affiliation: Bold author or organization handle directly below title.
+  // Show affiliation only if explicitly provided.
+  const authorName = compactNames(item.authors) || compactNames(item.organizations);
+  const affiliation = (item.affiliation || "").trim();
+  const authorDisplay = affiliation ? `${authorName} (${affiliation})` : authorName;
+  const authorLine = authorDisplay
+    ? element("div", { className: "record-author" }, [
+        element("strong", { text: authorDisplay }),
       ])
-    : recordMeta(item);
-  const summary = (item.summary || "").trim()
+    : null;
+
+  // 3. Stars / likes, Date, Platform:
+  // - Stars / likes: Bold count with label: ★ 128 stars for GitHub, 128 likes for Hugging Face.
+  // - Date: Regular-weight, labeled date: Updated Oct 20, 2026 or Published ...
+  // - Platform: Regular-weight GitHub or Hugging Face beside date.
+  const isGitHub = (item.source || "").toLowerCase().includes("github");
+  const isHF = (item.source || "").toLowerCase().includes("hugging face");
+
+  let engagementNode = null;
+  if (item.metrics?.stars !== undefined && item.metrics?.stars !== null && (isGitHub || !item.metrics?.likes)) {
+    engagementNode = element("strong", { className: "record-engagement" }, [
+      document.createTextNode(`★ ${Number(item.metrics.stars).toLocaleString()} ${t("stars")}`),
+    ]);
+  } else if (item.metrics?.likes !== undefined && item.metrics?.likes !== null) {
+    engagementNode = element("strong", { className: "record-engagement" }, [
+      document.createTextNode(`${Number(item.metrics.likes).toLocaleString()} ${t("likes")}`),
+    ]);
+  } else if (isAttention && item.metrics?.points !== undefined) {
+    engagementNode = element("strong", { className: "record-engagement" }, [
+      document.createTextNode(`${Number(item.metrics.points).toLocaleString()} ${t("points")}`),
+    ]);
+  }
+
+  let dateText = "";
+  if (item.updated_at && item.updated_at !== item.published_at) {
+    dateText = `${t("Updated")} ${formatDate(item.updated_at, { dateStyle: "medium" })}`;
+  } else if (item.published_at) {
+    dateText = `${t("Published")} ${formatDate(item.published_at, { dateStyle: "medium" })}`;
+  } else if (item.discovered_at) {
+    dateText = `${t("Discovered")} ${formatDate(item.discovered_at, { dateStyle: "medium" })}`;
+  }
+  const dateNode = dateText ? element("span", { className: "record-date", text: dateText }) : null;
+
+  const platformName = isGitHub ? "GitHub" : isHF ? "Hugging Face" : item.source;
+  const platformNode = element("span", { className: "record-platform", text: platformName });
+
+  const metaParts = [];
+  if (engagementNode) metaParts.push(engagementNode);
+  if (dateNode) {
+    if (metaParts.length) metaParts.push(document.createTextNode(" · "));
+    metaParts.push(dateNode);
+  }
+  if (platformNode) {
+    if (metaParts.length) metaParts.push(document.createTextNode(" · "));
+    metaParts.push(platformNode);
+  }
+  const metaLine = element("div", { className: "record-meta-line" }, metaParts);
+
+  // 4. What is inside:
+  // Source description first, followed by available contents: dataset, evaluation code, checkpoints, results.
+  const rawSummary = (item.summary || "").trim()
     ? shorten(item.summary)
     : t("No description published at the source.");
+  const summary = cleanCardSummary(rawSummary, benchmarkName);
+
+  const availableContents = extractAvailableContents(item);
+  const contentsLine = availableContents.length
+    ? element("p", { className: "record-contents" }, [
+        element("strong", { text: `${t("Contents")}: ` }),
+        document.createTextNode(availableContents.join(", ")),
+      ])
+    : null;
+
+  // 5. Why surfaced match explanation:
+  const searchMatchText = extractSearchMatchLine(item.rationale || []);
+  const searchMatchLine = searchMatchText
+    ? element("p", { className: "record-search-match", text: searchMatchText })
+    : null;
+
   const header = element("summary", { className: "record-summary" }, [
     element("span", {
       className: "signal-rank",
       text: String(index + 1).padStart(2, "0"),
     }),
     element("div", { className: "record-heading" }, [
-      // The benchmark title leads the row; the provenance line follows it
-      // instead of classifying the item before it is named (issue #248).
-      element("h3", { text: item.title }),
-      metadata,
-      // Attention rows already show their source-specific points, comments,
-      // and submissions in attentionActivity; the generic facts helper does
-      // not understand those counters and would incorrectly call them absent.
-      isAttention ? null : recordFacts(item),
-      ...(item.watchlist && item.watchlist_note
-        ? [element("p", { className: "signal-tldr", text: item.watchlist_note })]
-        : []),
+      headingTitle,
+      authorLine,
+      metaLine,
       element("p", {
-        className: item.summary ? "" : "signal-nodesc",
+        className: (item.summary || "").trim() ? "record-description" : "record-description signal-nodesc",
         text: isAttention
           ? `${summary} · ${metricLabel(item.metrics?.points, "point")}`
           : summary,
       }),
+      contentsLine,
+      searchMatchLine,
+      ...(item.watchlist && item.watchlist_note
+        ? [element("p", { className: "signal-tldr", text: item.watchlist_note })]
+        : []),
     ]),
-    isAttention ? attentionActivity(item) : scoreBlock(item),
   ]);
+
   return element(
     "details",
     {
