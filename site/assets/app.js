@@ -10191,11 +10191,18 @@ function attentionActivity(item) {
   ]);
 }
 
+function readinessLabel(r) {
+  if (!r) return "Runnable";
+  if (r === "runnable") return "Runnable";
+  if (r === "data-only") return "Dataset";
+  if (r === "environment-only") return "Environment";
+  return String(r);
+}
+
 function observationCard(item, index) {
   const isAttention = item.observation_kind === "attention";
 
   // 1. Benchmark name: Large, bold, directly clickable title linking to the source.
-  // Use explicit benchmark-name field when available; otherwise use repository name / item.title.
   const benchmarkName = item["benchmark-name"] || item.benchmark_name || item.title;
   const isZh = getLang() === "zh";
   const actionLabel = isAttention
@@ -10221,8 +10228,7 @@ function observationCard(item, index) {
   });
   const headingTitle = element("h3", { className: "record-title" }, [titleLink]);
 
-  // 2. Author / affiliation: Bold author or organization handle directly below title.
-  // Show affiliation only if explicitly provided.
+  // 2. Author / affiliation
   const authorName = compactNames(item.authors) || compactNames(item.organizations);
   const affiliation = (item.affiliation || "").trim();
   const authorDisplay = affiliation ? `${authorName} (${affiliation})` : authorName;
@@ -10232,10 +10238,37 @@ function observationCard(item, index) {
       ])
     : null;
 
-  // 3. Stars / likes, Date, Platform:
-  // - Stars / likes: Bold count with label: ★ 128 stars for GitHub, 128 likes for Hugging Face.
-  // - Date: Regular-weight, labeled date: Updated Oct 20, 2026 or Published ...
-  // - Platform: Regular-weight GitHub or Hugging Face beside date.
+  // 3. Date rail (Left column of Version 1)
+  const isArxiv = (item.source || "").toLowerCase().includes("arxiv");
+  const dateType = isArxiv
+    ? t("Paper v1")
+    : (item.updated_at && item.updated_at !== item.published_at)
+      ? t("Updated")
+      : t("Released");
+  const rawDate = item.releasedAt || item.published_at || item.updated_at || item.discovered_at;
+  const formattedShortDate = rawDate
+    ? formatDate(rawDate, { month: "short", day: "numeric" })
+    : t("Recent");
+  const dateRail = element("div", { className: "card-date" }, [
+    element("small", { text: dateType }),
+    element("span", { text: formattedShortDate }),
+  ]);
+
+  // 4. Tags row (Top of center column in Version 1)
+  const categoryName = item.category || item.topic || item.domain || (isAttention ? item.event : null);
+  const tagNodes = [];
+  if (categoryName) {
+    tagNodes.push(element("span", { className: "record-tag record-tag-primary", text: categoryName }));
+  }
+  if (authorDisplay) {
+    tagNodes.push(element("span", { className: "record-tag record-tag-publisher", text: authorDisplay }));
+  }
+  if (item.watchlist) {
+    tagNodes.push(element("span", { className: "record-tag record-tag-watch", text: t("Watchlist") }));
+  }
+  const tagsRow = tagNodes.length ? element("div", { className: "record-tags" }, tagNodes) : null;
+
+  // 5. Stars / likes, Platform & Readiness
   const isGitHub = (item.source || "").toLowerCase().includes("github");
   const isHF = (item.source || "").toLowerCase().includes("hugging face");
 
@@ -10254,33 +10287,26 @@ function observationCard(item, index) {
     ]);
   }
 
-  let dateText = "";
-  if (item.updated_at && item.updated_at !== item.published_at) {
-    dateText = `${t("Updated")} ${formatDate(item.updated_at, { dateStyle: "medium" })}`;
-  } else if (item.published_at) {
-    dateText = `${t("Published")} ${formatDate(item.published_at, { dateStyle: "medium" })}`;
-  } else if (item.discovered_at) {
-    dateText = `${t("Discovered")} ${formatDate(item.discovered_at, { dateStyle: "medium" })}`;
-  }
-  const dateNode = dateText ? element("span", { className: "record-date", text: dateText }) : null;
+  const readinessText = item.dataStatus === "catalog-listed-unverified"
+    ? t("Catalog indexed")
+    : readinessLabel(item.readiness || (item.format === "dataset" ? "data-only" : "runnable"));
+  const readinessNode = element("span", { className: "readiness", text: readinessText });
+
+  const scoreText = item.total_score != null
+    ? `${t("Attention")} ${Math.round(item.total_score)}`
+    : null;
+  const scoreNode = scoreText ? element("span", { className: "attention-score", text: scoreText }) : null;
 
   const platformName = isGitHub ? "GitHub" : isHF ? "Hugging Face" : item.source;
   const platformNode = element("span", { className: "record-platform", text: platformName });
 
-  const metaParts = [];
+  const metaParts = [readinessNode];
+  if (scoreNode) metaParts.push(scoreNode);
   if (engagementNode) metaParts.push(engagementNode);
-  if (dateNode) {
-    if (metaParts.length) metaParts.push(document.createTextNode(" · "));
-    metaParts.push(dateNode);
-  }
-  if (platformNode) {
-    if (metaParts.length) metaParts.push(document.createTextNode(" · "));
-    metaParts.push(platformNode);
-  }
+  if (platformNode) metaParts.push(platformNode);
   const metaLine = element("div", { className: "record-meta-line" }, metaParts);
 
-  // 4. What is inside:
-  // Source description first, followed by available contents: dataset, evaluation code, checkpoints, results.
+  // 6. What is inside:
   const rawSummary = (item.summary || "").trim()
     ? shorten(item.summary)
     : t("No description published at the source.");
@@ -10294,32 +10320,55 @@ function observationCard(item, index) {
       ])
     : null;
 
-  // 5. Why surfaced match explanation:
+  // 7. Why surfaced search match:
   const searchMatchText = extractSearchMatchLine(item.rationale || []);
   const searchMatchLine = searchMatchText
     ? element("p", { className: "record-search-match", text: searchMatchText })
     : null;
 
-  const header = element("summary", { className: "record-summary" }, [
-    element("span", {
-      className: "signal-rank",
-      text: String(index + 1).padStart(2, "0"),
+  // 8. Resource action links (Project ↗, Code ↗, Paper ↗)
+  const resourceLinks = [
+    element("a", {
+      text: t("Project ↗"),
+      attrs: { href: safeHttpUrl(item.url), target: "_blank", rel: "noopener noreferrer" },
     }),
-    element("div", { className: "record-heading" }, [
-      headingTitle,
-      authorLine,
-      metaLine,
-      element("p", {
-        className: (item.summary || "").trim() ? "record-description" : "record-description signal-nodesc",
-        text: isAttention
-          ? `${summary} · ${metricLabel(item.metrics?.points, "point")}`
-          : summary,
+  ];
+  if (item.primary_artifact_url && item.primary_artifact_url !== item.url) {
+    resourceLinks.push(
+      element("a", {
+        text: isArxiv ? t("Paper ↗") : t("Code ↗"),
+        attrs: { href: safeHttpUrl(item.primary_artifact_url), target: "_blank", rel: "noopener noreferrer" },
       }),
-      contentsLine,
-      searchMatchLine,
-      ...(item.watchlist && item.watchlist_note
-        ? [element("p", { className: "signal-tldr", text: item.watchlist_note })]
-        : []),
+    );
+  }
+  const resourcesRow = element("div", { className: "record-resources" }, resourceLinks);
+
+  // Center column content
+  const headingElements = [
+    tagsRow,
+    headingTitle,
+    authorLine,
+    element("p", {
+      className: (item.summary || "").trim() ? "record-description" : "record-description signal-nodesc",
+      text: isAttention ? `${summary} · ${metricLabel(item.metrics?.points, "point")}` : summary,
+    }),
+    metaLine,
+    contentsLine,
+    searchMatchLine,
+    resourcesRow,
+    ...(item.watchlist && item.watchlist_note
+      ? [element("p", { className: "signal-tldr", text: item.watchlist_note })]
+      : []),
+  ].filter(Boolean);
+
+  const header = element("summary", { className: "record-summary" }, [
+    dateRail,
+    element("div", { className: "record-heading" }, headingElements),
+    element("div", { className: "record-actions" }, [
+      element("span", {
+        className: "signal-rank",
+        text: String(index + 1).padStart(2, "0"),
+      }),
     ]),
   ]);
 

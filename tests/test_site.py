@@ -3378,3 +3378,13 @@ def test_observation_card_deterministic_layout_plan():
     assert ".score-details" in styles
     assert 't("Score details")' in script
 
+    # 6. Version 1: 3-column radar layout (date rail, tags, readiness pill, resources)
+    assert "card-date" in script
+    assert ".card-date" in styles
+    assert "record-tags" in script
+    assert ".record-tags" in styles
+    assert "readiness" in script
+    assert ".readiness" in styles
+    assert "record-resources" in script
+    assert ".record-resources" in styles
+
