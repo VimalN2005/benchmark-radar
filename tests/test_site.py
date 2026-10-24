@@ -3505,3 +3505,25 @@ def test_observation_card_search_match_sanitization_regression():
     assert res["searchLeakCleaned"] == "Matched keywords: agent"
     assert res["searchObviousOnly"] == ""
     assert "agent" in res["searchMeaningful"]
+
+
+def test_observation_card_priority_evidence_label_regression():
+    """Verify evidence items with total_score are labeled 'Priority' rather than 'Attention'."""
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    assert 'const scoreLabel = isAttention ? t("Attention") : t("Priority");' in script
+    assert "`${scoreLabel} ${Math.round(item.total_score)}`" in script
+
+
+def test_observation_card_event_kind_and_org_preservation_regression():
+    """Verify event_kind takes priority and organizations are preserved alongside authors."""
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    assert 'if (item.event_kind === "updated") {' in script
+    assert '} else if (item.event_kind === "released") {' in script
+    assert "compactNames(item.organizations)" in script
+    assert "authorParts" in script
+
+
+def test_observation_card_mobile_rail_width_regression():
+    """Verify mobile grid rail provides adequate width for date labels."""
+    styles = Path("site/assets/styles.css").read_text(encoding="utf-8")
+    assert "grid-template-columns: 24px 62px minmax(0, 1fr) 36px;" in styles

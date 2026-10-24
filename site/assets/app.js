@@ -1158,6 +1158,13 @@ const I18N = {
     "Radar first observed": "雷达首次观察到",
     "Read full card ↗": "阅读完整模型卡 ↗",
     "Open on Hugging Face ↗": "在 Hugging Face 打开 ↗",
+    "Project ↗": "项目 ↗",
+    "Paper ↗": "论文 ↗",
+    "Code ↗": "代码 ↗",
+    "Dataset ↗": "数据集 ↗",
+    "Discussion ↗": "讨论 ↗",
+    "Artifact ↗": "产物 ↗",
+    "Originally published": "最初发布于",
     "Score breakdown": "得分明细",
     "Activity breakdown": "活动明细",
     "no likes or downloads yet": "暂无点赞或下载",
@@ -4398,9 +4405,6 @@ function expandedRecord(item, teaser) {
       element("span", { className: "score-details-title", text: t("Score details") }),
     ]),
     element("div", { className: "score-details-content" }, [
-      element("div", { className: "score-overall-section" }, [
-        isAttention ? attentionActivity(item) : scoreBlock(item),
-      ]),
       element("h3", { text: t(isAttention ? "Activity breakdown" : "Score breakdown") }),
       element(
         "dl",
@@ -10247,33 +10251,49 @@ function observationCard(item, index) {
   const headingTitle = element("h3", { className: "record-title" }, [titleLink]);
 
   // 2. Author / affiliation: Show each author or organization once across the card.
-  const authorName = (compactNames(item.authors) || compactNames(item.organizations) || "").trim();
+  const authorName = (compactNames(item.authors) || "").trim();
+  const orgName = (compactNames(item.organizations) || "").trim();
   const affiliation = (item.affiliation || "").trim();
-  const authorDisplay = affiliation
-    ? (authorName ? `${authorName} (${affiliation})` : affiliation)
-    : authorName;
 
   const lowerTitle = benchmarkName.toLowerCase();
   const lowerAuthor = authorName.toLowerCase();
-  const isAuthorInTitle = lowerAuthor && (
-    lowerTitle === lowerAuthor ||
-    lowerTitle.startsWith(`${lowerAuthor}/`) ||
-    lowerTitle.startsWith(`${lowerAuthor}:`)
+  const lowerOrg = orgName.toLowerCase();
+
+  const isAuthorInTitle = Boolean(
+    lowerAuthor && (
+      lowerTitle === lowerAuthor ||
+      lowerTitle.startsWith(`${lowerAuthor}/`) ||
+      lowerTitle.startsWith(`${lowerAuthor}:`)
+    ),
+  );
+  const isOrgInTitle = Boolean(
+    lowerOrg && (
+      lowerTitle === lowerOrg ||
+      lowerTitle.startsWith(`${lowerOrg}/`) ||
+      lowerTitle.startsWith(`${lowerOrg}:`)
+    ),
   );
 
+  const authorParts = [];
+  if (authorName && !isAuthorInTitle) {
+    authorParts.push(authorName);
+  }
+  if (orgName && !isOrgInTitle && orgName.toLowerCase() !== authorName.toLowerCase()) {
+    authorParts.push(orgName);
+  }
+  if (
+    affiliation &&
+    !lowerTitle.includes(affiliation.toLowerCase()) &&
+    !authorParts.some((p) => p.toLowerCase().includes(affiliation.toLowerCase()))
+  ) {
+    authorParts.push(`(${affiliation})`);
+  }
+
   let authorLine = null;
-  if (authorDisplay) {
-    if (isAuthorInTitle) {
-      if (affiliation && !lowerTitle.includes(affiliation.toLowerCase())) {
-        authorLine = element("div", { className: "record-author" }, [
-          element("span", { className: "record-affiliation", text: affiliation }),
-        ]);
-      }
-    } else {
-      authorLine = element("div", { className: "record-author" }, [
-        element("strong", { text: authorDisplay }),
-      ]);
-    }
+  if (authorParts.length) {
+    authorLine = element("div", { className: "record-author" }, [
+      element("strong", { text: authorParts.join(" · ") }),
+    ]);
   }
 
   // 3. Date rail (Left column of Version 1): strictly pair label with timestamp.
@@ -10282,15 +10302,23 @@ function observationCard(item, index) {
   let dateType = "";
   let rawDate = null;
 
-  if (item.event_kind === "updated" || (item.updated_at && item.published_at && item.updated_at !== item.published_at)) {
+  if (item.event_kind === "updated") {
     dateType = t("Updated");
-    rawDate = item.updated_at;
+    rawDate = item.updated_at || item.published_at;
+  } else if (item.event_kind === "released") {
+    dateType = t("Released");
+    rawDate = item.published_at || item.releasedAt || item.discovered_at;
   } else if (isArxiv) {
     dateType = item.version ? `v${item.version}` : t("Paper");
     rawDate = item.published_at || item.releasedAt || item.discovered_at;
   } else if (item.published_at || item.releasedAt) {
-    dateType = t("Released");
-    rawDate = item.published_at || item.releasedAt;
+    if (item.updated_at && meaningfulDateDifference(item.published_at, item.updated_at)) {
+      dateType = t("Updated");
+      rawDate = item.updated_at;
+    } else {
+      dateType = t("Released");
+      rawDate = item.published_at || item.releasedAt;
+    }
   } else if (item.discovered_at) {
     dateType = t("Discovered");
     rawDate = item.discovered_at;
@@ -10363,13 +10391,14 @@ function observationCard(item, index) {
     ? element("span", { className: "readiness", text: readinessText })
     : null;
 
+  const scoreLabel = isAttention ? t("Attention") : t("Priority");
   const scoreText = item.total_score != null
-    ? `${t("Attention")} ${Math.round(item.total_score)}`
+    ? `${scoreLabel} ${Math.round(item.total_score)}`
     : null;
   const scoreNode = scoreText ? element("span", { className: "attention-score", text: scoreText }) : null;
 
-  const platformName = isGitHub ? "GitHub" : isHF ? "Hugging Face" : item.source;
-  const platformNode = element("span", { className: "record-platform", text: platformName });
+  const platformName = item.source || (isGitHub ? "GitHub" : isHF ? "Hugging Face" : "");
+  const platformNode = platformName ? element("span", { className: "record-platform", text: platformName }) : null;
 
   const metaParts = [];
   if (readinessNode) metaParts.push(readinessNode);
@@ -10400,18 +10429,43 @@ function observationCard(item, index) {
     ? element("p", { className: "record-search-match", text: searchMatchText })
     : null;
 
-  // 8. Resource action links (Project ↗, Code ↗, Paper ↗)
+  // 8. Resource action links (Project ↗, Code ↗, Paper ↗, Dataset ↗)
+  const isPaperSource = isArxiv || (item.source || "").toLowerCase().includes("paper") || (item.source || "").toLowerCase().includes("crossref") || (item.source || "").toLowerCase().includes("datacite");
+  const isDatasetSource = (item.format === "dataset") || (item.source || "").toLowerCase().includes("dataset");
+
+  let primaryActionLabel = t("Project ↗");
+  if (isPaperSource) {
+    primaryActionLabel = t("Paper ↗");
+  } else if (isDatasetSource) {
+    primaryActionLabel = t("Dataset ↗");
+  } else if (isAttention) {
+    primaryActionLabel = t("Discussion ↗");
+  }
+
   const resourceLinks = [
     element("a", {
-      text: t("Project ↗"),
+      text: primaryActionLabel,
       attrs: { href: safeHttpUrl(item.url), target: "_blank", rel: "noopener noreferrer" },
     }),
   ];
   if (item.primary_artifact_url && item.primary_artifact_url !== item.url) {
+    const artifactUrl = safeHttpUrl(item.primary_artifact_url);
+    const isArtifactGithub = artifactUrl.includes("github.com") || artifactUrl.includes("gitlab.com");
+    const isArtifactPaper = isArxiv || artifactUrl.includes("arxiv.org") || artifactUrl.includes("doi.org");
+
+    let secondaryLabel = t("Artifact ↗");
+    if (isAttention) {
+      secondaryLabel = isArtifactGithub ? t("Code ↗") : isArtifactPaper ? t("Paper ↗") : t("Artifact ↗");
+    } else if (isArtifactPaper) {
+      secondaryLabel = t("Paper ↗");
+    } else if (isArtifactGithub || item.format === "runnable" || item.format === "code") {
+      secondaryLabel = t("Code ↗");
+    }
+
     resourceLinks.push(
       element("a", {
-        text: isArxiv ? t("Paper ↗") : t("Code ↗"),
-        attrs: { href: safeHttpUrl(item.primary_artifact_url), target: "_blank", rel: "noopener noreferrer" },
+        text: secondaryLabel,
+        attrs: { href: artifactUrl, target: "_blank", rel: "noopener noreferrer" },
       }),
     );
   }

@@ -4682,8 +4682,8 @@ footer {
   }
 
   .record-summary {
-    grid-template-columns: 24px 30px minmax(0, 1fr);
-    gap: 0.65rem;
+    grid-template-columns: 24px 62px minmax(0, 1fr) 36px;
+    gap: 0.55rem;
   }
 
   .record-summary::before {
