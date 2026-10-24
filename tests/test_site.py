@@ -3387,4 +3387,3 @@ def test_observation_card_deterministic_layout_plan():
     assert ".readiness" in styles
     assert "record-resources" in script
     assert ".record-resources" in styles
-

@@ -1277,9 +1277,8 @@ a.briefing-chip-sources:focus-visible {
 
 .card-date small {
   color: var(--muted);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 10px;
+  letter-spacing: 0.02em;
   font-weight: 600;
 }
 
