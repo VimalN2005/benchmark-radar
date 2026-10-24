@@ -10192,10 +10192,11 @@ function attentionActivity(item) {
 }
 
 function readinessLabel(r) {
-  if (!r) return "Runnable";
-  if (r === "runnable") return "Runnable";
-  if (r === "data-only") return "Dataset";
-  if (r === "environment-only") return "Environment";
+  if (!r) return null;
+  const val = String(r).toLowerCase().trim();
+  if (val === "runnable") return t("Runnable");
+  if (val === "data-only" || val === "dataset") return t("Dataset");
+  if (val === "environment-only" || val === "environment") return t("Environment");
   return String(r);
 }
 
@@ -10287,10 +10288,22 @@ function observationCard(item, index) {
     ]);
   }
 
-  const readinessText = item.dataStatus === "catalog-listed-unverified"
-    ? t("Catalog indexed")
-    : readinessLabel(item.readiness || (item.format === "dataset" ? "data-only" : "runnable"));
-  const readinessNode = element("span", { className: "readiness", text: readinessText });
+  // Unsupported readiness must be omitted, not defaulted to "Runnable".
+  let readinessText = null;
+  if (item.dataStatus === "catalog-listed-unverified") {
+    readinessText = t("Catalog indexed");
+  } else if (item.readiness) {
+    readinessText = readinessLabel(item.readiness);
+  } else if (item.format === "dataset") {
+    readinessText = t("Dataset");
+  } else if (item.format === "runnable" || item.format === "code") {
+    readinessText = t("Runnable");
+  } else if (item.format === "environment") {
+    readinessText = t("Environment");
+  }
+  const readinessNode = readinessText
+    ? element("span", { className: "readiness", text: readinessText })
+    : null;
 
   const scoreText = item.total_score != null
     ? `${t("Attention")} ${Math.round(item.total_score)}`
@@ -10300,11 +10313,14 @@ function observationCard(item, index) {
   const platformName = isGitHub ? "GitHub" : isHF ? "Hugging Face" : item.source;
   const platformNode = element("span", { className: "record-platform", text: platformName });
 
-  const metaParts = [readinessNode];
+  const metaParts = [];
+  if (readinessNode) metaParts.push(readinessNode);
   if (scoreNode) metaParts.push(scoreNode);
   if (engagementNode) metaParts.push(engagementNode);
   if (platformNode) metaParts.push(platformNode);
-  const metaLine = element("div", { className: "record-meta-line" }, metaParts);
+  const metaLine = metaParts.length
+    ? element("div", { className: "record-meta-line" }, metaParts)
+    : null;
 
   // 6. What is inside:
   const rawSummary = (item.summary || "").trim()

@@ -3387,3 +3387,53 @@ def test_observation_card_deterministic_layout_plan():
     assert ".readiness" in styles
     assert "record-resources" in script
     assert ".record-resources" in styles
+
+
+def test_observation_card_readiness_regression():
+    """Verify that absent readiness metadata does not default to 'Runnable'.
+
+    Addresses Toby Bridges' [P1] code review finding: all 772 latest cards
+    (including 119 arXiv papers and 17 HN threads) must omit the readiness
+    pill unless explicit metadata establishes readiness.
+    """
+    import json
+    import shutil
+    import subprocess
+
+    import pytest
+
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    assert "function readinessLabel(r)" in script
+    assert 'if (!r) return "Runnable";' not in script
+    assert "if (!r) return null;" in script
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+
+    start_r = script.index("function readinessLabel(r)")
+    end_r = script.index("\n}\n", start_r) + 2
+    readiness_fn = script[start_r:end_r]
+
+    program = f"""
+    function t(s) {{ return s; }}
+    {readiness_fn}
+
+    const res = {{
+      absent: readinessLabel(undefined),
+      nullVal: readinessLabel(null),
+      emptyStr: readinessLabel(""),
+      runnable: readinessLabel("runnable"),
+      dataOnly: readinessLabel("data-only"),
+      dataset: readinessLabel("dataset")
+    }};
+    console.log(JSON.stringify(res));
+    """
+    result = subprocess.run([node, "-e", program], capture_output=True, text=True, check=True)
+    res = json.loads(result.stdout)
+    assert res["absent"] is None
+    assert res["nullVal"] is None
+    assert res["emptyStr"] is None
+    assert res["runnable"] == "Runnable"
+    assert res["dataOnly"] == "Dataset"
+    assert res["dataset"] == "Dataset"
