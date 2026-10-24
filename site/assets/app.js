@@ -4405,6 +4405,9 @@ function expandedRecord(item, teaser) {
       element("span", { className: "score-details-title", text: t("Score details") }),
     ]),
     element("div", { className: "score-details-content" }, [
+      element("div", { className: "score-overall-section" }, [
+        isAttention ? attentionActivity(item) : scoreBlock(item),
+      ]),
       element("h3", { text: t(isAttention ? "Activity breakdown" : "Score breakdown") }),
       element(
         "dl",

@@ -1421,6 +1421,8 @@ def test_static_html_references_existing_local_assets():
         "cli/",
         "cite/",
         "about/",
+        "library/",
+        "models/",
     }
     missing = []
     for reference in parser.local_refs:
@@ -3338,7 +3340,7 @@ def test_model_filter_controls_and_status_have_chinese_translations():
         + "console.log(JSON.stringify({zh, en: keys.map(key => t(key))}));"
     )
     result = subprocess.run(
-        [node, "-e", program], capture_output=True, text=True, timeout=60, check=True
+        [node], input=program, capture_output=True, text=True, timeout=60, check=True
     )
     translated = json.loads(result.stdout)
     assert translated["en"] == keys
