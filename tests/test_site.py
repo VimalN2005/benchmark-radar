@@ -3451,3 +3451,14 @@ def test_observation_card_date_pairing_regression():
     assert "rawDate = item.updated_at;" in script
     assert "isMatchingFeedDay" in script
     assert "isSingleDayFeed && rawDateDay && rawDateDay === state.todayDate" in script
+
+
+def test_observation_card_author_deduplication_regression():
+    """Verify that author/org is rendered only once across tags, title link, and author subtitle.
+
+    Addresses Koutian Wu's finding where RecoX and mohanvenkat1 were rendered three times.
+    """
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    assert "isAuthorInTitle" in script
+    assert "record-tag-publisher" not in script
+    assert 'benchmarkName.replace(/\\/+$/, "")' in script

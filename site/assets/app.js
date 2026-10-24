@@ -10204,7 +10204,10 @@ function observationCard(item, index) {
   const isAttention = item.observation_kind === "attention";
 
   // 1. Benchmark name: Large, bold, directly clickable title linking to the source.
-  const benchmarkName = item["benchmark-name"] || item.benchmark_name || item.title;
+  let benchmarkName = String(item["benchmark-name"] || item.benchmark_name || item.title || "").trim();
+  if (benchmarkName.endsWith("/")) {
+    benchmarkName = benchmarkName.replace(/\/+$/, "");
+  }
   const isZh = getLang() === "zh";
   const actionLabel = isAttention
     ? t("Open public discussion ↗")
@@ -10229,15 +10232,35 @@ function observationCard(item, index) {
   });
   const headingTitle = element("h3", { className: "record-title" }, [titleLink]);
 
-  // 2. Author / affiliation
-  const authorName = compactNames(item.authors) || compactNames(item.organizations);
+  // 2. Author / affiliation: Show each author or organization once across the card.
+  const authorName = (compactNames(item.authors) || compactNames(item.organizations) || "").trim();
   const affiliation = (item.affiliation || "").trim();
-  const authorDisplay = affiliation ? `${authorName} (${affiliation})` : authorName;
-  const authorLine = authorDisplay
-    ? element("div", { className: "record-author" }, [
+  const authorDisplay = affiliation
+    ? (authorName ? `${authorName} (${affiliation})` : affiliation)
+    : authorName;
+
+  const lowerTitle = benchmarkName.toLowerCase();
+  const lowerAuthor = authorName.toLowerCase();
+  const isAuthorInTitle = lowerAuthor && (
+    lowerTitle === lowerAuthor ||
+    lowerTitle.startsWith(`${lowerAuthor}/`) ||
+    lowerTitle.startsWith(`${lowerAuthor}:`)
+  );
+
+  let authorLine = null;
+  if (authorDisplay) {
+    if (isAuthorInTitle) {
+      if (affiliation && !lowerTitle.includes(affiliation.toLowerCase())) {
+        authorLine = element("div", { className: "record-author" }, [
+          element("span", { className: "record-affiliation", text: affiliation }),
+        ]);
+      }
+    } else {
+      authorLine = element("div", { className: "record-author" }, [
         element("strong", { text: authorDisplay }),
-      ])
-    : null;
+      ]);
+    }
+  }
 
   // 3. Date rail (Left column of Version 1): strictly pair label with timestamp.
   // Omit repeated date when the selected feed day already supplies that context.
@@ -10279,14 +10302,11 @@ function observationCard(item, index) {
   }
   const dateRail = element("div", { className: "card-date" }, dateChildren);
 
-  // 4. Tags row (Top of center column in Version 1)
+  // 4. Tags row (Top of center column in Version 1: classification topics & watchlist)
   const categoryName = item.category || item.topic || item.domain || (isAttention ? item.event : null);
   const tagNodes = [];
   if (categoryName) {
     tagNodes.push(element("span", { className: "record-tag record-tag-primary", text: categoryName }));
-  }
-  if (authorDisplay) {
-    tagNodes.push(element("span", { className: "record-tag record-tag-publisher", text: authorDisplay }));
   }
   if (item.watchlist) {
     tagNodes.push(element("span", { className: "record-tag record-tag-watch", text: t("Watchlist") }));
