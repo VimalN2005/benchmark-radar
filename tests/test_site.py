@@ -3513,7 +3513,9 @@ def test_observation_card_priority_evidence_label_regression():
     """Verify evidence items with total_score are labeled 'Priority' rather than 'Attention'."""
     script = Path("site/assets/app.js").read_text(encoding="utf-8")
     assert 'const scoreLabel = isAttention ? t("Attention") : t("Priority");' in script
-    assert "`${scoreLabel} ${Math.round(item.total_score)}`" in script
+    assert "`${scoreLabel} ${formattedScore}`" in script
+    assert "precision = max > 10 ? 0 : 2" in script
+    assert "openRubric(item)" in script
 
 
 def test_observation_card_event_kind_and_org_preservation_regression():
@@ -3521,6 +3523,8 @@ def test_observation_card_event_kind_and_org_preservation_regression():
     script = Path("site/assets/app.js").read_text(encoding="utf-8")
     assert 'if (item.event_kind === "updated") {' in script
     assert '} else if (item.event_kind === "released") {' in script
+    assert '} else if (item.event_kind === "discovered") {' in script
+    assert '} else if (item.event_kind === "discussed") {' in script
     assert "compactNames(item.organizations)" in script
     assert "authorParts" in script
 

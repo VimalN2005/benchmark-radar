@@ -1330,6 +1330,20 @@ a.briefing-chip-sources:focus-visible {
   font-size: 0.85rem;
 }
 
+button.attention-score {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+button.attention-score:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .record-resources {
   display: flex;
   gap: 14px;

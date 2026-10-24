@@ -1123,6 +1123,8 @@ const I18N = {
     "Click the marker to pin these details": "点击标记以固定这些详情",
     "Click to pin record details": "点击固定记录详情",
     Comments: "评论",
+    Discovered: "发现于",
+    Discussed: "讨论于",
     "Discovery sources": "发现来源",
     "Each linked benchmark counts once for this document. Open its detail to inspect scores, protocols and citations.":
       "每个关联 benchmark 在这份文档中只计一次。打开详情可查看分数、评测条件和引用来源。",
@@ -10204,14 +10206,6 @@ function renderTrendMap() {
   }
 }
 
-function attentionActivity(item) {
-  return element("div", { className: "attention-activity" }, [
-    element("strong", { text: metricLabel(item.metrics?.points, "point") }),
-    element("span", { text: metricLabel(item.metrics?.comments, "comment") }),
-    element("span", { text: metricLabel(item.metrics?.submissions ?? 1, "submission") }),
-  ]);
-}
-
 function readinessLabel(r) {
   if (!r) return null;
   const val = String(r).toLowerCase().trim();
@@ -10311,6 +10305,12 @@ function observationCard(item, index) {
   } else if (item.event_kind === "released") {
     dateType = t("Released");
     rawDate = item.published_at || item.releasedAt || item.discovered_at;
+  } else if (item.event_kind === "discovered") {
+    dateType = t("Discovered");
+    rawDate = item.discovered_at || item.published_at;
+  } else if (item.event_kind === "discussed") {
+    dateType = t("Discussed");
+    rawDate = item.published_at || item.discovered_at;
   } else if (isArxiv) {
     dateType = item.version ? `v${item.version}` : t("Paper");
     rawDate = item.published_at || item.releasedAt || item.discovered_at;
@@ -10395,10 +10395,35 @@ function observationCard(item, index) {
     : null;
 
   const scoreLabel = isAttention ? t("Attention") : t("Priority");
-  const scoreText = item.total_score != null
-    ? `${scoreLabel} ${Math.round(item.total_score)}`
-    : null;
-  const scoreNode = scoreText ? element("span", { className: "attention-score", text: scoreText }) : null;
+  let scoreNode = null;
+  if (item.total_score != null) {
+    const max = Number(scoreMax(item));
+    const precision = max > 10 ? 0 : 2;
+    const formattedScore = Number(item.total_score || 0).toFixed(precision);
+    if (!isAttention) {
+      scoreNode = element(
+        "button",
+        {
+          className: "attention-score rubric-trigger",
+          attrs: {
+            type: "button",
+            "aria-label": `${t("Priority score")} ${formattedScore}. ${t("How is this scored?")}`,
+          },
+        },
+        [document.createTextNode(`${scoreLabel} ${formattedScore}`)],
+      );
+      scoreNode.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openRubric(item);
+      });
+    } else {
+      scoreNode = element("span", {
+        className: "attention-score",
+        text: `${scoreLabel} ${formattedScore}`,
+      });
+    }
+  }
 
   const platformName = item.source || (isGitHub ? "GitHub" : isHF ? "Hugging Face" : "");
   const platformNode = platformName ? element("span", { className: "record-platform", text: platformName }) : null;
@@ -10510,6 +10535,14 @@ function observationCard(item, index) {
     },
     [header, expandedRecord(item, (item.summary || "").trim() ? summary : "")],
   );
+}
+
+function attentionActivity(item) {
+  return element("div", { className: "attention-activity" }, [
+    element("strong", { text: metricLabel(item.metrics?.points, "point") }),
+    element("span", { text: metricLabel(item.metrics?.comments, "comment") }),
+    element("span", { text: metricLabel(item.metrics?.submissions ?? 1, "submission") }),
+  ]);
 }
 
 const CONTACT_EMAIL = "ktwu01@gmail.com";
