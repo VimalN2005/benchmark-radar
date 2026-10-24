@@ -3437,3 +3437,17 @@ def test_observation_card_readiness_regression():
     assert res["runnable"] == "Runnable"
     assert res["dataOnly"] == "Dataset"
     assert res["dataset"] == "Dataset"
+
+
+def test_observation_card_date_pairing_regression():
+    """Verify that 'Updated' strictly pairs with updated_at and suppresses redundant feed dates.
+
+    Addresses Toby Bridges' [P2] finding (label must not prefer Updated while
+    timestamp prefers published_at) and Koutian Wu's finding (omitting repeated
+    day strings when the active feed day supplies that context).
+    """
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    assert 'dateType = t("Updated");' in script
+    assert "rawDate = item.updated_at;" in script
+    assert "isMatchingFeedDay" in script
+    assert "isSingleDayFeed && rawDateDay && rawDateDay === state.todayDate" in script

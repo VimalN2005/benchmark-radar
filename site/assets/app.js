@@ -10239,21 +10239,45 @@ function observationCard(item, index) {
       ])
     : null;
 
-  // 3. Date rail (Left column of Version 1)
+  // 3. Date rail (Left column of Version 1): strictly pair label with timestamp.
+  // Omit repeated date when the selected feed day already supplies that context.
   const isArxiv = (item.source || "").toLowerCase().includes("arxiv");
-  const dateType = isArxiv
-    ? t("Paper v1")
-    : (item.updated_at && item.updated_at !== item.published_at)
-      ? t("Updated")
-      : t("Released");
-  const rawDate = item.releasedAt || item.published_at || item.updated_at || item.discovered_at;
-  const formattedShortDate = rawDate
+  let dateType = "";
+  let rawDate = null;
+
+  if (item.event_kind === "updated" || (item.updated_at && item.published_at && item.updated_at !== item.published_at)) {
+    dateType = t("Updated");
+    rawDate = item.updated_at;
+  } else if (isArxiv) {
+    dateType = item.version ? `v${item.version}` : t("Paper");
+    rawDate = item.published_at || item.releasedAt || item.discovered_at;
+  } else if (item.published_at || item.releasedAt) {
+    dateType = t("Released");
+    rawDate = item.published_at || item.releasedAt;
+  } else if (item.discovered_at) {
+    dateType = t("Discovered");
+    rawDate = item.discovered_at;
+  } else if (item.updated_at) {
+    dateType = t("Updated");
+    rawDate = item.updated_at;
+  } else {
+    dateType = t("Recent");
+    rawDate = null;
+  }
+
+  const rawDateDay = rawDate ? String(rawDate).slice(0, 10) : "";
+  const isSingleDayFeed = Boolean(state.todayDate && state.todayDate !== "all");
+  const isMatchingFeedDay = Boolean(isSingleDayFeed && rawDateDay && rawDateDay === state.todayDate);
+
+  const formattedShortDate = (rawDate && !isMatchingFeedDay)
     ? formatDate(rawDate, { month: "short", day: "numeric" })
-    : t("Recent");
-  const dateRail = element("div", { className: "card-date" }, [
-    element("small", { text: dateType }),
-    element("span", { text: formattedShortDate }),
-  ]);
+    : "";
+
+  const dateChildren = [element("small", { text: dateType })];
+  if (formattedShortDate) {
+    dateChildren.push(element("span", { text: formattedShortDate }));
+  }
+  const dateRail = element("div", { className: "card-date" }, dateChildren);
 
   // 4. Tags row (Top of center column in Version 1)
   const categoryName = item.category || item.topic || item.domain || (isAttention ? item.event : null);
