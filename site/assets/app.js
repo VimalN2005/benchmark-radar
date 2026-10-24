@@ -4264,6 +4264,18 @@ function extractAvailableContents(item) {
 
 function extractSearchMatchLine(rationaleList) {
   if (!Array.isArray(rationaleList) || !rationaleList.length) return "";
+  const stopWords = new Set([
+    "benchmark",
+    "bench",
+    "evaluation",
+    "evaluat",
+    "eval",
+    "model",
+    "dataset",
+    "reasoning",
+    "ai",
+    "test",
+  ]);
   const stemMap = {
     evaluat: "evaluation",
     bench: "benchmark",
@@ -4276,13 +4288,15 @@ function extractSearchMatchLine(rationaleList) {
     if (str.startsWith("Matched:")) {
       const terms = str
         .slice("Matched:".length)
-        .split(",")
-        .map((s) => s.trim().toLowerCase())
+        .replace(/[~|/+]/g, " ")
+        .split(/[, ]+/)
+        .map((s) => s.replace(/[*?^$"']/g, "").trim().toLowerCase())
         .filter(Boolean)
-        .map((term) => stemMap[term] || term);
+        .map((term) => stemMap[term] || term)
+        .filter((term) => !stopWords.has(term));
       const unique = [...new Set(terms)];
       if (unique.length) {
-        return `${t("Matches your search:")} "${unique.join('", "')}"`;
+        return `${t("Matched keywords:")} ${unique.join(", ")}`;
       }
     }
   }
@@ -10380,8 +10394,8 @@ function observationCard(item, index) {
       ])
     : null;
 
-  // 7. Why surfaced search match:
-  const searchMatchText = extractSearchMatchLine(item.rationale || []);
+  // 7. Why surfaced search match: display only when user has entered a search query
+  const searchMatchText = state.q ? extractSearchMatchLine(item.rationale || []) : "";
   const searchMatchLine = searchMatchText
     ? element("p", { className: "record-search-match", text: searchMatchText })
     : null;

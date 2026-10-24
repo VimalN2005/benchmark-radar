@@ -3462,3 +3462,46 @@ def test_observation_card_author_deduplication_regression():
     assert "isAuthorInTitle" in script
     assert "record-tag-publisher" not in script
     assert 'benchmarkName.replace(/\\/+$/, "")' in script
+
+
+def test_observation_card_search_match_sanitization_regression():
+    """Verify that search match rationale strips internal regex/tokens and omits obvious terms.
+
+    Addresses Koutian Wu's finding: "agent~benchmark", "benchmark*" such word is
+    obvious and should not appear in the UI. Also gates display to active search.
+    """
+    import json
+    import shutil
+    import subprocess
+
+    import pytest
+
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+    assert "extractSearchMatchLine" in script
+    assert "stopWords" in script
+    assert 'state.q ? extractSearchMatchLine(item.rationale || []) : ""' in script
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("node is not installed")
+
+    start_s = script.index("function extractSearchMatchLine(rationaleList)")
+    end_s = script.index("\n}\n", start_s) + 2
+    search_fn = script[start_s:end_s]
+
+    program = f"""
+    function t(s) {{ return s; }}
+    {search_fn}
+
+    const testResults = {{
+      searchLeakCleaned: extractSearchMatchLine(["Matched: agent~benchmark, benchmark*"]),
+      searchObviousOnly: extractSearchMatchLine(["Matched: benchmark, evaluation"]),
+      searchMeaningful: extractSearchMatchLine(["Matched: reasoning, agent*"])
+    }};
+    console.log(JSON.stringify(testResults));
+    """
+    result = subprocess.run([node, "-e", program], capture_output=True, text=True, check=True)
+    res = json.loads(result.stdout)
+    assert res["searchLeakCleaned"] == "Matched keywords: agent"
+    assert res["searchObviousOnly"] == ""
+    assert "agent" in res["searchMeaningful"]
