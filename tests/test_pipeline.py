@@ -808,6 +808,53 @@ def test_pipeline_quarantines_future_dated_records_before_scoring(monkeypatch):
     assert run.selection["suppressed_future_dated"] == 1
 
 
+def test_pipeline_preserves_records_from_ahead_timezones_before_scoring(monkeypatch):
+    """Verify records within 24 hours ahead of collection time (e.g. Asia/China timezone)
+    are retained in pipeline processing instead of being discarded as future-dated (issue #907)."""
+    collection_now = datetime(2026, 10, 20, 10, 0, tzinfo=UTC)
+    current = item(
+        source="Hugging Face",
+        source_id="org/current",
+        url="https://huggingface.co/datasets/org/current",
+        published_at=collection_now - timedelta(hours=2),
+    )
+    china_record = item(
+        source="Hugging Face",
+        source_id="org/china-timezone",
+        url="https://huggingface.co/datasets/org/china-timezone",
+        published_at=collection_now + timedelta(hours=8),
+    )
+    future = item(
+        source="Hugging Face",
+        source_id="org/future",
+        url="https://huggingface.co/datasets/org/future",
+        published_at=datetime(2050, 1, 1, tzinfo=UTC),
+    )
+    monkeypatch.setitem(
+        __import__("benchmark_radar.pipeline", fromlist=["SOURCE_FETCHERS"]).SOURCE_FETCHERS,
+        "huggingface",
+        lambda config, since, limit: [current, china_record, future],
+    )
+    config = {
+        "radar": {
+            "lookback_hours": 48,
+            "max_items_per_source": 10,
+            "report_limit": 10,
+            "minimum_score": 0,
+        },
+        "taxonomy": {"benchmark": ["benchmark"]},
+        "sources": {"huggingface": {"enabled": True, "required": True}},
+    }
+
+    run = run_pipeline(config, collection_now)
+
+    assert set(record.source_id for record in run.items) == {"org/current", "org/china-timezone"}
+    assert run.health[0].item_count == 2
+    assert run.health[0].error == "Discarded 1 future-dated record(s)"
+    assert run.selection["fetched"] == 3
+    assert run.selection["suppressed_future_dated"] == 1
+
+
 def test_pipeline_accounts_for_future_records_rejected_inside_a_connector(monkeypatch):
     current = item(
         source="Hugging Face",

@@ -29,7 +29,13 @@ class ConnectorPayloadError(ValueError):
     """Raised when a source returns a successful but incompatible payload."""
 
 
-FUTURE_TIMESTAMP_TOLERANCE = timedelta(minutes=5)
+# A small buffer for upstream query windows (e.g. DataCite, OpenAIRE).
+QUERY_WINDOW_BUFFER = timedelta(minutes=5)
+
+# A 24-hour tolerance covers legitimate records from time zones ahead of UTC
+# (e.g. Asia/China at UTC+8, or Pacific at UTC+14) and date-only timestamps
+# without discarding them as future-dated (issue #907).
+FUTURE_TIMESTAMP_TOLERANCE = timedelta(hours=24)
 GITHUB_RELEASE_PARSER_VERSION = "github-releases/4"
 
 
@@ -205,6 +211,13 @@ def fetch_first_party_feeds(config: dict[str, Any], since: datetime, limit: int)
         key=lambda item: (item.updated_at or item.published_at, item.source_id),
         reverse=True,
     )[:limit]
+
+
+def _query_latest_allowed(config: dict[str, Any]) -> datetime:
+    collection_now = config.get("_collection_now")
+    if not isinstance(collection_now, datetime):
+        collection_now = datetime.now(UTC)
+    return collection_now.astimezone(UTC) + QUERY_WINDOW_BUFFER
 
 
 def _latest_allowed(config: dict[str, Any]) -> datetime:
@@ -393,7 +406,7 @@ def fetch_arxiv(config: dict[str, Any], since: datetime, limit: int) -> list[Rad
                         "search_query": (
                             f"({query}) AND lastUpdatedDate:"
                             f"[{overlap_since:%Y%m%d%H%M} TO "
-                            f"{_latest_allowed(config):%Y%m%d%H%M}]"
+                            f"{_query_latest_allowed(config):%Y%m%d%H%M}]"
                         ),
                         "start": 0,
                         "max_results": limit,
@@ -630,7 +643,7 @@ def fetch_github(config: dict[str, Any], since: datetime, limit: int) -> list[Ra
                 params={
                     "q": (
                         f"{query} pushed:{date_filter}.."
-                        f"{_latest_allowed(config).date().isoformat()}"
+                        f"{_query_latest_allowed(config).date().isoformat()}"
                     ),
                     "sort": "updated",
                     "order": "desc",
@@ -1083,7 +1096,7 @@ def fetch_crossref(
     searches = [str(value).strip() for value in config.get("searches", []) if str(value).strip()]
     budget = max(1, int(config.get("max_requests", len(searches) or 1)))
     page_size = min(1000, max(1, int(config.get("page_size", 50))))
-    until = _latest_allowed(config).date()
+    until = _query_latest_allowed(config).date()
     found: dict[str, RadarItem] = {}
     for search in searches[:budget]:
         payload = get_json(
@@ -1301,7 +1314,7 @@ def fetch_openaire(
     # V3 rejects a page larger than 100 rather than silently truncating it.
     page_size = min(100, max(1, int(config.get("page_size", 50))))
     window_start = since.astimezone(UTC).date()
-    window_end = _latest_allowed(config).date()
+    window_end = _query_latest_allowed(config).date()
     found: dict[str, RadarItem] = {}
     for search in searches[:budget]:
         payload = get_json(
@@ -1580,7 +1593,7 @@ def fetch_datacite(
     window_start = since.astimezone(UTC)
     window = (
         f"registered:[{_datacite_query_time(window_start)} TO "
-        f"{_datacite_query_time(_latest_allowed(config))}]"
+        f"{_datacite_query_time(_query_latest_allowed(config))}]"
     )
     found: dict[str, RadarItem] = {}
     for search in searches[:budget]:
@@ -1848,7 +1861,7 @@ def fetch_semantic_scholar(
                 params={
                     "query": search,
                     "publicationDateOrYear": (
-                        f"{since.date().isoformat()}:{_latest_allowed(config).date().isoformat()}"
+                        f"{since.date().isoformat()}:{_query_latest_allowed(config).date().isoformat()}"
                     ),
                     "offset": offset,
                     "limit": min(page_size, limit - len(found)),
@@ -2120,7 +2133,7 @@ def fetch_openalex(
     api_key = os.getenv("OPENALEX_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("OPENALEX_API_KEY is not configured")
-    now = now or _latest_allowed(config) - FUTURE_TIMESTAMP_TOLERANCE
+    now = now or _query_latest_allowed(config) - QUERY_WINDOW_BUFFER
     config.setdefault("_collection_now", now)
     found: dict[str, RadarItem] = {}
     for search in config.get("searches", []):
@@ -2401,7 +2414,7 @@ def fetch_brave(config: dict[str, Any], since: datetime, limit: int) -> list[Rad
     found: dict[str, RadarItem] = {}
     freshness_end = min(
         since + timedelta(days=_BRAVE_RANGE_DAYS),
-        _latest_allowed(config),
+        _query_latest_allowed(config),
     ).date()
     for query in config.get("searches", []):
         payload = get_json(

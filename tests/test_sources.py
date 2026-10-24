@@ -1,5 +1,5 @@
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.error import HTTPError
 
@@ -3213,6 +3213,35 @@ def test_huggingface_rejects_a_future_creation_date_even_when_modified_now(monke
     }
 
     assert fetch_huggingface(config, datetime(2026, 7, 26, tzinfo=UTC), 10) == []
+    assert config["_future_rejections"] == 1
+
+
+def test_huggingface_preserves_records_from_ahead_timezones(monkeypatch):
+    """Verify records up to 24 hours ahead of UTC (e.g. China/Hong Kong UTC+8)
+    are retained rather than discarded as future-dated (issue #907)."""
+    now = datetime(2026, 10, 20, 10, 0, tzinfo=UTC)
+    china_time = now + timedelta(hours=8)
+
+    def fake_get_json(url, params):
+        return [
+            {"id": "org/china-release", "lastModified": china_time.isoformat()},
+            {"id": "org/future", "lastModified": "2050-01-01T00:00:00Z"},
+        ]
+
+    monkeypatch.setattr("benchmark_radar.sources.get_json", fake_get_json)
+
+    config = {
+        "kinds": ["datasets"],
+        "searches": ["benchmark"],
+        "_collection_now": now,
+    }
+    items = fetch_huggingface(
+        config,
+        now - timedelta(days=2),
+        10,
+    )
+
+    assert [item.source_id for item in items] == ["org/china-release"]
     assert config["_future_rejections"] == 1
 
 
