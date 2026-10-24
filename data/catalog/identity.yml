@@ -21,323 +21,549 @@
 # attaches an `identity_inheritance` note naming the donor source. Inheritance
 # never touches scores: the two rows stay two rows and no series joins another.
 schema_version: 1
-
 equivalent:
-  # Reviewed source-preserving links for the Claire import. These groups expose
-  # siblings only: neither record inherits fields or scores from the other.
-  - group_id: claire-gauge-2608-05948
-    basis: reviewer_asserted
-    members: [claire-radar:2608.05948, opencompass:2574]
-    anchors: [arxiv:2608.05948]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-09-27
-    note: >-
-      Both records identify the GAUGE benchmark introduced by arXiv:2608.05948.
-      The other Claire record named GAUGE cites arXiv:2607.24889 and remains separate.
-
-  - group_id: claire-elbench-2608-09548
-    basis: reviewer_asserted
-    members: [claire-radar:2608.09548, opencompass:2571]
-    anchors: [hf:zeroloss-lab/elbench]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-09-27
-    note: Both records identify ELBench through the ZeroLoss-Lab/ELBench dataset.
-
-  # Same instrument across the two crawls, confirmed by hand. These 21 groups
-  # pair score-dense llm-stats records with identity-rich OpenCompass records.
-  - group_id: gpqa
-    basis: reviewer_asserted
-    members: [llm-stats:gpqa, opencompass:1135]
-    inherit_from: opencompass:1135
-    anchors: [arxiv:2311.12022, gh:idavidrein/gpqa]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: llm-stats gpqa and OpenCompass 1135 are both GPQA (Rein et al., 2023).
-
-  - group_id: mmlu-pro
-    basis: reviewer_asserted
-    members: [llm-stats:mmlu-pro, opencompass:1276]
-    inherit_from: opencompass:1276
-    anchors: [arxiv:2406.01574, gh:TIGER-AI-Lab/MMLU-Pro]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MMLU-Pro (TIGER-Lab, 2024); not to be confused with MMLU-ProX.
-
-  - group_id: mmlu
-    basis: reviewer_asserted
-    members: [llm-stats:mmlu, opencompass:498]
-    inherit_from: opencompass:498
-    anchors: [arxiv:2009.03300, gh:hendrycks/test]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MMLU (Hendrycks et al., 2020).
-
-  - group_id: livecodebench
-    basis: reviewer_asserted
-    members: [llm-stats:livecodebench, opencompass:1413]
-    inherit_from: opencompass:1413
-    anchors: [arxiv:2403.07974, gh:LiveCodeBench/LiveCodeBench]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are LiveCodeBench (Jain et al., 2024). The v6 version split is a variant below.
-
-  - group_id: math
-    basis: reviewer_asserted
-    members: [llm-stats:math, opencompass:534]
-    inherit_from: opencompass:534
-    anchors: [arxiv:2103.03874, gh:hendrycks/math]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are the MATH benchmark (Hendrycks et al., 2021).
-
-  - group_id: ifeval
-    basis: reviewer_asserted
-    members: [llm-stats:ifeval, opencompass:1136]
-    inherit_from: opencompass:1136
-    anchors: [arxiv:2311.07911, gh:google-research/google-research]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are IFEval (Zhou et al., 2023); code lives in the google-research monorepo.
-
-  - group_id: humaneval
-    basis: reviewer_asserted
-    members: [llm-stats:humaneval, opencompass:537]
-    inherit_from: opencompass:537
-    anchors: [arxiv:2107.03374, gh:openai/human-eval]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are HumanEval (Chen et al., 2021).
-
-  - group_id: mmmu
-    basis: reviewer_asserted
-    members: [llm-stats:mmmu, opencompass:1248]
-    inherit_from: opencompass:1248
-    anchors: [arxiv:2311.16502, gh:MMMU-Benchmark/MMMU]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MMMU (Yue et al., 2023).
-
-  - group_id: gsm8k
-    basis: reviewer_asserted
-    members: [llm-stats:gsm8k, opencompass:535]
-    inherit_from: opencompass:535
-    anchors: [arxiv:2110.14168, gh:openai/grade-school-math]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are GSM8K (Cobbe et al., 2021).
-
-  - group_id: mathvista
-    basis: reviewer_asserted
-    members: [llm-stats:mathvista, opencompass:1178]
-    inherit_from: opencompass:1178
-    anchors: [arxiv:2310.02255, gh:lupantech/MathVista]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MathVista (Lu et al., 2023). The mini split is a variant below.
-
-  - group_id: livebench
-    basis: reviewer_asserted
-    members: [llm-stats:livebench, opencompass:1246]
-    inherit_from: opencompass:1246
-    anchors: [arxiv:2406.19314, gh:livebench/livebench]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are LiveBench (White et al., 2024).
-
-  - group_id: arc-c
-    basis: reviewer_asserted
-    members: [llm-stats:arc-c, opencompass:502]
-    inherit_from: opencompass:502
-    anchors: [arxiv:1803.05457]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: >-
-      Both are the ARC Challenge set (Clark et al., 2018). Single donor anchor:
-      the OpenCompass card carries the paper only, and the reviewer supplies the
-      second warrant.
-
-  - group_id: supergpqa
-    basis: reviewer_asserted
-    members: [llm-stats:supergpqa, opencompass:1538]
-    inherit_from: opencompass:1538
-    anchors: [arxiv:2502.14739, gh:SuperGPQA/SuperGPQA]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are SuperGPQA (M-A-P / ByteDance / 2077.AI, 2025).
-
-  - group_id: mathvision
-    basis: reviewer_asserted
-    members: [llm-stats:mathvision, opencompass:1370]
-    inherit_from: opencompass:1370
-    anchors: [arxiv:2402.14804, gh:mathllm/MATH-V]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MathVision / MATH-V (Wang et al., 2024).
-
-  - group_id: mbpp
-    basis: reviewer_asserted
-    members: [llm-stats:mbpp, opencompass:538]
-    inherit_from: opencompass:538
-    anchors: [arxiv:2108.07732, gh:google-research/google-research]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MBPP (Austin et al., 2021); code lives in the google-research monorepo.
-
-  - group_id: drop
-    basis: reviewer_asserted
-    members: [llm-stats:drop, opencompass:536]
-    inherit_from: opencompass:536
-    anchors: [arxiv:1903.00161, gh:allenai/allennlp-reading-comprehension]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are DROP (Dua et al., 2019).
-
-  - group_id: realworldqa
-    basis: reviewer_asserted
-    members: [llm-stats:realworldqa, opencompass:1361]
-    inherit_from: opencompass:1361
-    anchors: [hf:xai-org/RealworldQA]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: >-
-      Both are RealworldQA (xAI). Single donor anchor: the OpenCompass card
-      carries the dataset only, and the reviewer supplies the second warrant.
-
-  - group_id: hellaswag
-    basis: reviewer_asserted
-    members: [llm-stats:hellaswag, opencompass:531]
-    inherit_from: opencompass:531
-    anchors: [arxiv:1905.07830, gh:rowanz/hellaswag]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are HellaSwag (Zellers et al., 2019).
-
-  - group_id: mmstar
-    basis: reviewer_asserted
-    members: [llm-stats:mmstar, opencompass:1175]
-    inherit_from: opencompass:1175
-    anchors: [arxiv:2403.20330, gh:MMStar-Benchmark/MMStar]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are MMStar (Chen et al., 2024).
-
-  - group_id: ocrbench
-    basis: reviewer_asserted
-    members: [llm-stats:ocrbench, opencompass:557]
-    inherit_from: opencompass:557
-    anchors: [arxiv:2305.07895, gh:Yuliang-Liu/MultimodalOCR]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are OCRBench (Liu et al., 2024).
-
-  - group_id: winogrande
-    basis: reviewer_asserted
-    members: [llm-stats:winogrande, opencompass:1109]
-    inherit_from: opencompass:1109
-    anchors: [arxiv:1907.10641, gh:allenai/winogrande]
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-    note: Both are WinoGrande (Sakaguchi et al., 2019).
-
-  # Issue #583's registry entry and the committed OpenCompass crawl are the
-  # same benchmark: both are named VBench, both resolve to Vchitect/VBench, and
-  # the OpenCompass card carries the introducing paper the registry entry
-  # cites. Left unlinked the catalog publishes two VBench rows whose detail
-  # shards do not name each other, and the registry row cannot show the release
-  # date, publisher or openness the crawl already recorded. VBench++ and
-  # VBench-2.0 are separate instruments with their own registry entries and are
-  # deliberately not members. The signature below is the contributor's, not the
-  # maintainer's: every other group in this file is ktwu01's, so this one is a
-  # proposal to re-sign or drop.
-  - group_id: vbench
-    basis: reviewer_asserted
-    members: [model-reports:vbench, opencompass:1375]
-    inherit_from: opencompass:1375
-    anchors: [arxiv:2311.17982, gh:Vchitect/VBench]
-    reviewed_by: lazizbekravshanov
-    reviewed_at: 2026-09-12
-    note: Both are VBench (Huang et al., 2023).
-
-# Related, cross-linked, never merged. Two kinds share this block:
-#
-# The first three are the OpenCompass-internal anchor-sharing pairs from
-# identity_candidates.yml, each downgraded from "equivalent candidate" to a
-# variant on inspection: sharing a paper or a repo is not sharing an instrument.
-#
-# The last five are #262's near-matches: name-similar llm-stats records that a
-# reviewer judged to be a version, split or harness of an OpenCompass benchmark
-# rather than the same instrument. They are recorded here as variants -- one of
-# the three outcomes #262 allows -- so they are cross-linked to their nearest
-# benchmark but never merged into it and never co-ranked. Because they are
-# variants and not `equivalent` groups, they inherit no identity: an llm-stats
-# near-match still reads "publisher not established", now beside a cross-link.
+- group_id: claire-gauge-2608-05948
+  basis: reviewer_asserted
+  members:
+  - claire-radar:2608.05948
+  - opencompass:2574
+  anchors:
+  - arxiv:2608.05948
+  reviewed_by: ktwu01
+  reviewed_at: 2026-09-27
+  note: Both records identify the GAUGE benchmark introduced by arXiv:2608.05948.
+    The other Claire record named GAUGE cites arXiv:2607.24889 and remains separate.
+- group_id: claire-elbench-2608-09548
+  basis: reviewer_asserted
+  members:
+  - claire-radar:2608.09548
+  - opencompass:2571
+  anchors:
+  - hf:zeroloss-lab/elbench
+  reviewed_by: ktwu01
+  reviewed_at: 2026-09-27
+  note: Both records identify ELBench through the ZeroLoss-Lab/ELBench dataset.
+- group_id: gpqa
+  basis: reviewer_asserted
+  members:
+  - llm-stats:gpqa
+  - opencompass:1135
+  - model-reports:gpqa
+  inherit_from: opencompass:1135
+  anchors:
+  - arxiv:2311.12022
+  - gh:idavidrein/gpqa
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: llm-stats gpqa and OpenCompass 1135 are both GPQA (Rein et al., 2023).
+- group_id: mmlu-pro
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mmlu-pro
+  - opencompass:1276
+  - model-reports:mmlu_pro
+  inherit_from: opencompass:1276
+  anchors:
+  - arxiv:2406.01574
+  - gh:TIGER-AI-Lab/MMLU-Pro
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MMLU-Pro (TIGER-Lab, 2024); not to be confused with MMLU-ProX.
+- group_id: mmlu
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mmlu
+  - opencompass:498
+  - model-reports:mmlu
+  inherit_from: opencompass:498
+  anchors:
+  - arxiv:2009.03300
+  - gh:hendrycks/test
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MMLU (Hendrycks et al., 2020).
+- group_id: livecodebench
+  basis: reviewer_asserted
+  members:
+  - llm-stats:livecodebench
+  - opencompass:1413
+  - model-reports:livecodebench
+  - artificial-analysis:livecodebench
+  inherit_from: opencompass:1413
+  anchors:
+  - arxiv:2403.07974
+  - gh:LiveCodeBench/LiveCodeBench
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are LiveCodeBench (Jain et al., 2024). The v6 version split is a variant
+    below.
+- group_id: math
+  basis: reviewer_asserted
+  members:
+  - llm-stats:math
+  - opencompass:534
+  inherit_from: opencompass:534
+  anchors:
+  - arxiv:2103.03874
+  - gh:hendrycks/math
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are the MATH benchmark (Hendrycks et al., 2021).
+- group_id: ifeval
+  basis: reviewer_asserted
+  members:
+  - llm-stats:ifeval
+  - opencompass:1136
+  - model-reports:ifeval
+  inherit_from: opencompass:1136
+  anchors:
+  - arxiv:2311.07911
+  - gh:google-research/google-research
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are IFEval (Zhou et al., 2023); code lives in the google-research monorepo.
+- group_id: humaneval
+  basis: reviewer_asserted
+  members:
+  - llm-stats:humaneval
+  - opencompass:537
+  - model-reports:humaneval
+  inherit_from: opencompass:537
+  anchors:
+  - arxiv:2107.03374
+  - gh:openai/human-eval
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are HumanEval (Chen et al., 2021).
+- group_id: mmmu
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mmmu
+  - opencompass:1248
+  - model-reports:mmmu
+  inherit_from: opencompass:1248
+  anchors:
+  - arxiv:2311.16502
+  - gh:MMMU-Benchmark/MMMU
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MMMU (Yue et al., 2023).
+- group_id: gsm8k
+  basis: reviewer_asserted
+  members:
+  - llm-stats:gsm8k
+  - opencompass:535
+  - model-reports:gsm8k
+  inherit_from: opencompass:535
+  anchors:
+  - arxiv:2110.14168
+  - gh:openai/grade-school-math
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are GSM8K (Cobbe et al., 2021).
+- group_id: mathvista
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mathvista
+  - opencompass:1178
+  - model-reports:mathvista
+  inherit_from: opencompass:1178
+  anchors:
+  - arxiv:2310.02255
+  - gh:lupantech/MathVista
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MathVista (Lu et al., 2023). The mini split is a variant below.
+- group_id: livebench
+  basis: reviewer_asserted
+  members:
+  - llm-stats:livebench
+  - opencompass:1246
+  - model-reports:livebench
+  inherit_from: opencompass:1246
+  anchors:
+  - arxiv:2406.19314
+  - gh:livebench/livebench
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are LiveBench (White et al., 2024).
+- group_id: arc-c
+  basis: reviewer_asserted
+  members:
+  - llm-stats:arc-c
+  - opencompass:502
+  inherit_from: opencompass:502
+  anchors:
+  - arxiv:1803.05457
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: 'Both are the ARC Challenge set (Clark et al., 2018). Single donor anchor:
+    the OpenCompass card carries the paper only, and the reviewer supplies the second
+    warrant.'
+- group_id: supergpqa
+  basis: reviewer_asserted
+  members:
+  - llm-stats:supergpqa
+  - opencompass:1538
+  - model-reports:super_gpqa
+  inherit_from: opencompass:1538
+  anchors:
+  - arxiv:2502.14739
+  - gh:SuperGPQA/SuperGPQA
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are SuperGPQA (M-A-P / ByteDance / 2077.AI, 2025).
+- group_id: mathvision
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mathvision
+  - opencompass:1370
+  - model-reports:mathvision
+  inherit_from: opencompass:1370
+  anchors:
+  - arxiv:2402.14804
+  - gh:mathllm/MATH-V
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MathVision / MATH-V (Wang et al., 2024).
+- group_id: mbpp
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mbpp
+  - opencompass:538
+  - model-reports:mbpp
+  inherit_from: opencompass:538
+  anchors:
+  - arxiv:2108.07732
+  - gh:google-research/google-research
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MBPP (Austin et al., 2021); code lives in the google-research monorepo.
+- group_id: drop
+  basis: reviewer_asserted
+  members:
+  - llm-stats:drop
+  - opencompass:536
+  - model-reports:drop
+  inherit_from: opencompass:536
+  anchors:
+  - arxiv:1903.00161
+  - gh:allenai/allennlp-reading-comprehension
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are DROP (Dua et al., 2019).
+- group_id: realworldqa
+  basis: reviewer_asserted
+  members:
+  - llm-stats:realworldqa
+  - opencompass:1361
+  inherit_from: opencompass:1361
+  anchors:
+  - hf:xai-org/RealworldQA
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: 'Both are RealworldQA (xAI). Single donor anchor: the OpenCompass card carries
+    the dataset only, and the reviewer supplies the second warrant.'
+- group_id: hellaswag
+  basis: reviewer_asserted
+  members:
+  - llm-stats:hellaswag
+  - opencompass:531
+  inherit_from: opencompass:531
+  anchors:
+  - arxiv:1905.07830
+  - gh:rowanz/hellaswag
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are HellaSwag (Zellers et al., 2019).
+- group_id: mmstar
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mmstar
+  - opencompass:1175
+  inherit_from: opencompass:1175
+  anchors:
+  - arxiv:2403.20330
+  - gh:MMStar-Benchmark/MMStar
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are MMStar (Chen et al., 2024).
+- group_id: ocrbench
+  basis: reviewer_asserted
+  members:
+  - llm-stats:ocrbench
+  - opencompass:557
+  inherit_from: opencompass:557
+  anchors:
+  - arxiv:2305.07895
+  - gh:Yuliang-Liu/MultimodalOCR
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are OCRBench (Liu et al., 2024).
+- group_id: winogrande
+  basis: reviewer_asserted
+  members:
+  - llm-stats:winogrande
+  - opencompass:1109
+  inherit_from: opencompass:1109
+  anchors:
+  - arxiv:1907.10641
+  - gh:allenai/winogrande
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+  note: Both are WinoGrande (Sakaguchi et al., 2019).
+- group_id: vbench
+  basis: reviewer_asserted
+  members:
+  - model-reports:vbench
+  - opencompass:1375
+  inherit_from: opencompass:1375
+  anchors:
+  - arxiv:2311.17982
+  - gh:Vchitect/VBench
+  reviewed_by: lazizbekravshanov
+  reviewed_at: 2026-09-12
+  note: Both are VBench (Huang et al., 2023).
+- group_id: humanitys-last-exam
+  basis: reviewer_asserted
+  members:
+  - llm-stats:humanity's-last-exam
+  - model-reports:hle
+  - artificial-analysis:humanitys-last-exam
+  anchors:
+  - arxiv:2501.14249
+  - gh:centerforaisafety/hle
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: Humanity's Last Exam (Rein/CAIS et al., 2025).
+- group_id: mmmu-pro
+  basis: reviewer_asserted
+  members:
+  - llm-stats:mmmu-pro
+  - model-reports:mmmu_pro
+  - artificial-analysis:mmmu-pro
+  anchors:
+  - arxiv:2409.02813
+  - gh:MMMU-Benchmark/MMMU
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: MMMU-Pro (Yue et al., 2024).
+- group_id: scicode
+  basis: reviewer_asserted
+  members:
+  - llm-stats:scicode
+  - model-reports:scicode
+  - artificial-analysis:scicode
+  anchors:
+  - arxiv:2407.13168
+  - gh:scicode-bench/SciCode
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: SciCode (2024).
+- group_id: ifbench
+  basis: reviewer_asserted
+  members:
+  - llm-stats:ifbench
+  - model-reports:ifbench
+  - artificial-analysis:ifbench
+  anchors:
+  - arxiv:2507.02833
+  - gh:allenai/IFBench
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: IFBench (AllenAI, 2025).
+- group_id: aa-lcr
+  basis: reviewer_asserted
+  members:
+  - llm-stats:aa-lcr
+  - model-reports:aa_lcr
+  - artificial-analysis:aa-lcr
+  anchors:
+  - gh:artificial-analysis/aa-lcr
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: AA-LCR (Artificial Analysis, 2024).
+- group_id: gpqa-diamond
+  basis: reviewer_asserted
+  members:
+  - model-reports:gpqa_diamond
+  - artificial-analysis:gpqa-diamond
+  anchors:
+  - arxiv:2311.12022
+  - gh:idavidrein/gpqa
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: GPQA Diamond subset (Rein et al., 2023).
+- group_id: swe-bench-verified
+  basis: reviewer_asserted
+  members:
+  - llm-stats:swe-bench-verified
+  - model-reports:swe_bench_verified
+  anchors:
+  - arxiv:2310.06770
+  - gh:princeton-nlp/SWE-bench
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: SWE-Bench Verified (OpenAI / Princeton, 2024).
+- group_id: swe-bench-pro
+  basis: reviewer_asserted
+  members:
+  - llm-stats:swe-bench-pro
+  - model-reports:swe_bench_pro
+  anchors:
+  - gh:scaleapi/SWE-bench_Pro-os
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: SWE-Bench Pro (Scale AI, 2025).
+- group_id: swe-bench-multilingual
+  basis: reviewer_asserted
+  members:
+  - llm-stats:swe-bench-multilingual
+  - model-reports:swe_bench_multilingual
+  anchors:
+  - arxiv:2310.06770
+  - gh:princeton-nlp/SWE-bench
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: SWE-Bench Multilingual (Princeton, 2024).
+- group_id: aime-2025
+  basis: reviewer_asserted
+  members:
+  - artificial-analysis:aime-2025
+  - llm-stats:aime-2025
+  anchors:
+  - gh:openai/simple-evals
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: AIME 2025 (MAA / OpenAI, 2025).
+- group_id: math-500
+  basis: reviewer_asserted
+  members:
+  - model-reports:math_500
+  - llm-stats:math-500
+  anchors:
+  - arxiv:2103.03874
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: MATH-500 (OpenAI, 2024).
+- group_id: mmmlu
+  basis: reviewer_asserted
+  members:
+  - model-reports:mmmlu
+  - llm-stats:mmmlu
+  anchors:
+  - arxiv:2409.02813
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: MMMLU (OpenAI, 2024).
+- group_id: simpleqa
+  basis: reviewer_asserted
+  members:
+  - model-reports:simpleqa
+  - llm-stats:simpleqa
+  anchors:
+  - arxiv:2411.04368
+  - gh:openai/simple-evals
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: SimpleQA (OpenAI, 2024).
+- group_id: osworld
+  basis: reviewer_asserted
+  members:
+  - model-reports:osworld
+  - llm-stats:osworld
+  anchors:
+  - arxiv:2404.07972
+  - gh:xlang-ai/OSWorld
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: OSWorld (XLang, 2024).
+- group_id: arc-agi-2
+  basis: reviewer_asserted
+  members:
+  - model-reports:arc_agi_2
+  - llm-stats:arc-agi-v2
+  anchors:
+  - gh:arcprize/arc-prize
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: ARC-AGI-2 (Chollet / ARC Prize, 2025).
+- group_id: terminal-bench-hard
+  basis: reviewer_asserted
+  members:
+  - artificial-analysis:terminal-bench-hard
+  - llm-stats:terminal-bench-hard
+  anchors:
+  - gh:harbor-bench/terminal-bench
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: Terminal-Bench Hard (Harbor, 2025).
+- group_id: terminal-bench
+  basis: reviewer_asserted
+  members:
+  - model-reports:terminal_bench
+  - llm-stats:terminal-bench
+  anchors:
+  - gh:harbor-bench/terminal-bench
+  reviewed_by: VimalN2005
+  reviewed_at: '2026-10-24'
+  note: Terminal-Bench (Harbor, 2025).
 variants:
-  # RACE ships as two difficulty splits from one paper and one repo. Same
-  # source, different question sets: scores from one are not scores from the other.
-  - of: opencompass:516        # RACE(High)
-    key: opencompass:517       # RACE(Middle)
-    relation: split_sibling
-    anchors: [arxiv:1704.04683, gh:qizhex/race_ar_baselines]
-    note: Two difficulty splits of RACE, not one benchmark.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-18
-
-  # MIEB is the image counterpart built on the MTEB framework and repo. Related
-  # project, different modality and task set.
-  - of: opencompass:2034       # MTEB
-    key: opencompass:1781      # MIEB
-    relation: framework_sibling
-    anchors: [arxiv:2210.07316, gh:embeddings-benchmark/mteb]
-    note: MIEB is the image embedding benchmark on the MTEB framework, not MTEB.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-18
-
-  # MM-AlignBench is the evaluation set introduced in the OmniAlign-V paper.
-  # They share the paper and repo but name different things: the dataset and its
-  # benchmark.
-  - of: opencompass:1553       # OmniAlign-V
-    key: opencompass:1558      # MM-AlignBench
-    relation: introduced_in
-    anchors: [arxiv:2502.18411, gh:phoenixz810/omnialign-v]
-    note: MM-AlignBench is introduced in the OmniAlign-V paper; distinct artifacts.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-18
-
-  # #262 near-matches. Cross-source, so the llm-stats side carries no anchor;
-  # each is a reviewer's judgement that the pair is related but not one instrument.
-  - of: opencompass:1206       # MMBench
-    key: llm-stats:mmbench-v1.1
-    relation: version_refinement
-    note: MMBench-v1.1 is the rebalanced revision of MMBench, not the same test set.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-
-  - of: opencompass:2075       # Arena-Hard-Auto
-    key: llm-stats:arena-hard
-    relation: auto_judge_harness
-    note: >-
-      Arena-Hard-Auto is the automatic-judge harness scored here; it is the
-      evaluation of Arena-Hard, not an identical instrument.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-
-  - of: opencompass:1625       # ubuntu_osworld
-    key: llm-stats:osworld
-    relation: split_sibling
-    note: The OpenCompass card is the Ubuntu-only split of OSWorld, not full OSWorld.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-
-  - of: opencompass:1178       # MathVista
-    key: llm-stats:mathvista-mini
-    relation: split_sibling
-    note: MathVista-mini is the testmini split of MathVista, not the full set.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
-
-  - of: opencompass:1413       # LiveCodeBench
-    key: llm-stats:livecodebench-v6
-    relation: version_split
-    note: LiveCodeBench-v6 is a dated release window of LiveCodeBench, not the whole.
-    reviewed_by: ktwu01
-    reviewed_at: 2026-08-22
+- of: opencompass:516
+  key: opencompass:517
+  relation: split_sibling
+  anchors:
+  - arxiv:1704.04683
+  - gh:qizhex/race_ar_baselines
+  note: Two difficulty splits of RACE, not one benchmark.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-18
+- of: opencompass:2034
+  key: opencompass:1781
+  relation: framework_sibling
+  anchors:
+  - arxiv:2210.07316
+  - gh:embeddings-benchmark/mteb
+  note: MIEB is the image embedding benchmark on the MTEB framework, not MTEB.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-18
+- of: opencompass:1553
+  key: opencompass:1558
+  relation: introduced_in
+  anchors:
+  - arxiv:2502.18411
+  - gh:phoenixz810/omnialign-v
+  note: MM-AlignBench is introduced in the OmniAlign-V paper; distinct artifacts.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-18
+- of: opencompass:1206
+  key: llm-stats:mmbench-v1.1
+  relation: version_refinement
+  note: MMBench-v1.1 is the rebalanced revision of MMBench, not the same test set.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+- of: opencompass:2075
+  key: llm-stats:arena-hard
+  relation: auto_judge_harness
+  note: Arena-Hard-Auto is the automatic-judge harness scored here; it is the evaluation
+    of Arena-Hard, not an identical instrument.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+- of: opencompass:1625
+  key: llm-stats:osworld
+  relation: split_sibling
+  note: The OpenCompass card is the Ubuntu-only split of OSWorld, not full OSWorld.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+- of: opencompass:1178
+  key: llm-stats:mathvista-mini
+  relation: split_sibling
+  note: MathVista-mini is the testmini split of MathVista, not the full set.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22
+- of: opencompass:1413
+  key: llm-stats:livecodebench-v6
+  relation: version_split
+  note: LiveCodeBench-v6 is a dated release window of LiveCodeBench, not the whole.
+  reviewed_by: ktwu01
+  reviewed_at: 2026-08-22

@@ -312,3 +312,54 @@ def test_seed_keeps_document_only_labs_and_publishes_nothing_without_scores(tmp_
     assert "/models/?lab=Ai2" in nav
     assert _models_seed(records, None) == {}
     assert _models_seed([], payload) == {}
+
+
+def test_equivalent_benchmarks_joined_across_scored_sources(tmp_path):
+    shards = tmp_path / "benchmarks"
+    shards.mkdir()
+    shard_a = _shard(
+        "llm-stats:hle",
+        [("Acme-1", "Acme", 50.0, "2026-01-01")],
+        source="llm_stats",
+    )
+    shard_a["siblings"] = [
+        {"key": "model-reports:hle", "slug": "model-reports-hle", "relation": "equivalent"}
+    ]
+    (shards / "llm-stats-hle.json").write_text(json.dumps(shard_a))
+
+    shard_b = _shard(
+        "model-reports:hle",
+        [("Beta <1>", "Beta", 60.0, "2026-02-01")],
+    )
+    shard_b["scores_by_source"] = {"model_reports": shard_b["scores_by_source"].pop("llm_stats")}
+    shard_b["siblings"] = [
+        {"key": "llm-stats:hle", "slug": "llm-stats-hle", "relation": "equivalent"}
+    ]
+    (shards / "model-reports-hle.json").write_text(json.dumps(shard_b))
+
+    payload = build_model_scores(shards)
+    # The two records join into one canonical benchmark row
+    assert len(payload["benchmarks"]) == 1
+    assert payload["benchmarks"][0]["key"] == "llm-stats:hle"
+
+    # Both models now share the joined benchmark
+    models = payload["models"]
+    assert len(models) == 2
+    by_model = {m["model"]: m["scores"] for m in models}
+    assert by_model["Acme-1"] == [[0, 50.0, 1, None, "llm_stats", "llm-stats:hle"]]
+    assert by_model["Beta <1>"] == [[0, 60.0, 1, None, "model_reports", "model-reports:hle"]]
+
+    records = [
+        {
+            "key": "llm-stats:hle",
+            "slug": "llm-stats-hle",
+            "name": "HLE",
+            "source": "llm_stats",
+            "categories": ["reasoning"],
+            "scored_models": [{"name": "Acme-1"}],
+        },
+    ]
+    _, _, matrix, _ = _models_seed(records, payload).values()
+    assert '<span class="models-source">LLM Stats</span>' in matrix
+    assert '<span class="models-source">Model reports</span>' in matrix
+    assert "over the 1 benchmarks all 2 models share, 0–100" in matrix

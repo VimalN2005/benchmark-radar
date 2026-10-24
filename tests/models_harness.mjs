@@ -595,4 +595,54 @@ await tick();
 assert.doesNotMatch(byId("models-panel").querySelector("ol.models-panel-chart").textContent, /\(\[/);
 state.modelsQuery = "";
 
-console.log("Models matrix, shared-benchmark average rules and the three #862 defects passed.");
+// Issue #904: Cross-source joined records show source badges on cells and load sibling shards in panel.
+const joinedPayload = {
+  schema_version: 1,
+  benchmarks: [
+    { key: "llm-stats:hle", direction: "higher_is_better", multiplier: 100, percent: true, unit: "%" },
+  ],
+  models: [
+    { key: "acme-1", model: "Acme-1", organization: "Acme", dates: { llm_stats: ["2026-01-01", "model_announcement"] }, scores: [[0, 50, 1, null, "llm_stats", "llm-stats:hle"]] },
+    { key: "beta-1", model: "Beta-1", organization: "Beta", dates: { model_reports: ["2026-02-01", "document_publication"] }, scores: [[0, 60, 1, null, "model_reports", "model-reports:hle"]] },
+  ],
+};
+const joinedRecords = [
+  { key: "llm-stats:hle", slug: "llm-stats-hle", name: "HLE", source: "llm_stats", categories: ["reasoning"], scored_models: [] },
+  { key: "model-reports:hle", slug: "model-reports-hle", name: "HLE", source: "model_reports", categories: ["reasoning"], scored_models: [] },
+];
+reset(joinedPayload);
+state.benchmarkIndex = joinedRecords;
+models.renderModels();
+const cellsWithSource = byId("models-list").querySelectorAll("button.models-cell").flatMap((cell) => cell.querySelectorAll("span.models-source")).map((node) => node.textContent);
+assert(cellsWithSource.includes("LLM Stats") && cellsWithSource.includes("Model reports"));
+
+// Sibling shard loading in side panel
+shards.set("llm-stats-hle", {
+  siblings: [{ key: "model-reports:hle", slug: "model-reports-hle", name: "HLE", source: "model_reports", relation: "equivalent" }],
+  scores_by_source: {
+    llm_stats: {
+      series: { direction: "higher_is_better", score_summary: { display_multiplier: 1, unit: "percent" } },
+      rows: [{ model_name: "Acme-1", organization: "Acme", value: 50, source: "llm_stats" }],
+    },
+  },
+});
+shards.set("model-reports-hle", {
+  siblings: [{ key: "llm-stats:hle", slug: "llm-stats-hle", name: "HLE", source: "llm_stats", relation: "equivalent" }],
+  scores_by_source: {
+    model_reports: {
+      series: { direction: "higher_is_better", score_summary: { display_multiplier: 1, unit: "percent" } },
+      rows: [{ model_name: "Acme-1", organization: "Acme", value: 55, source: "model_reports" }],
+    },
+  },
+});
+
+const joinedCell = byId("models-list").querySelector('button.models-cell[data-model="acme-1"]');
+joinedCell.click();
+await tick();
+await tick();
+const panelScoresText = byId("models-panel").querySelector("ul.models-panel-scores").textContent;
+assert(panelScoresText.includes("LLM Stats") && panelScoresText.includes("Model reports"));
+assert(panelScoresText.includes("50%") && panelScoresText.includes("55%"));
+
+console.log("Models matrix, shared-benchmark average rules, #862 defects, and #904 joined records passed.");
+

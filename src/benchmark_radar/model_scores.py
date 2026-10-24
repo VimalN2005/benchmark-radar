@@ -72,6 +72,56 @@ def _unit_label(series: dict[str, Any], percent: bool) -> str | None:
     return {"elo": "Elo", "usd": "USD"}.get(unit, unit)
 
 
+def canonical_benchmark_map(shard_dir: Path) -> dict[str, str]:
+    """Map each record key in an equivalent group to the group's canonical key."""
+    equiv_graph: dict[str, set[str]] = {}
+    for path in sorted(shard_dir.glob("*.json")):
+        try:
+            shard = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        key = (shard.get("record") or {}).get("key")
+        if not key:
+            continue
+        equiv_graph.setdefault(key, set())
+        for sibling in shard.get("siblings") or []:
+            if sibling.get("relation") == "equivalent" and sibling.get("key"):
+                equiv_graph[key].add(sibling["key"])
+                equiv_graph.setdefault(sibling["key"], set()).add(key)
+
+    visited: set[str] = set()
+    mapping: dict[str, str] = {}
+    for key in sorted(equiv_graph):
+        if key in visited:
+            continue
+        component: set[str] = set()
+        queue = [key]
+        visited.add(key)
+        while queue:
+            curr = queue.pop(0)
+            component.add(curr)
+            for neighbor in equiv_graph.get(curr, ()):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+        if len(component) > 1:
+
+            def _rank(k: str) -> tuple[int, str]:
+                prefix = k.split(":", 1)[0]
+                order = {
+                    "llm-stats": 0,
+                    "model-reports": 1,
+                    "artificial-analysis": 2,
+                    "opencompass": 3,
+                }
+                return (order.get(prefix, 99), k)
+
+            canonical = min(component, key=_rank)
+            for member in component:
+                mapping[member] = canonical
+    return mapping
+
+
 def build_model_scores(shard_dir: Path) -> dict[str, Any]:
     """Each registry model's best reported score on each benchmark record.
 
@@ -82,6 +132,7 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
     side panel reads every row from the record's shard.
     """
     shard_dir = Path(shard_dir)
+    canonical_map = canonical_benchmark_map(shard_dir)
     registry = build_registry({}, shard_dir)
     keys = {
         (record.organization.lower(), record.model.lower()): key for key, record in registry.items()
@@ -104,6 +155,7 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
     split = {pair for pair, ids in source_ids.items() if len(ids) > 1}
     columns: dict[str, tuple[str, str | None]] = {}
     benchmarks: list[dict[str, Any]] = []
+    benchmark_indices: dict[str, int] = {}
     cells: dict[str, dict[int, list[Any]]] = {}
     # Per model and source: the latest date on its rows and what that date is
     # (a score report's publication, or a model announcement for aggregators).
@@ -122,21 +174,37 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
             series = payload.get("series") or {}
             multiplier, percent = score_scale(series)
             direction = series.get("direction")
-            index = len(benchmarks)
+            target_key = canonical_map.get(record_key, record_key)
+            is_joined = target_key in canonical_map
+
+            if target_key not in benchmark_indices:
+                index = len(benchmarks)
+                benchmark_indices[target_key] = index
+                benchmark = {
+                    "key": target_key,
+                    "direction": direction if direction in DIRECTIONS else None,
+                    "multiplier": multiplier,
+                    "percent": percent,
+                    "unit": _unit_label(series, percent),
+                }
+                benchmarks.append(benchmark)
+            else:
+                index = benchmark_indices[target_key]
+                benchmark = benchmarks[index]
+                if not benchmark.get("percent") and percent:
+                    benchmark["percent"] = percent
+                    benchmark["direction"] = direction if direction in DIRECTIONS else None
+                    benchmark["unit"] = _unit_label(series, percent)
+                    benchmark["multiplier"] = multiplier
+
             # A record whose rows fall in several comparable groups (protocols,
             # scaffolds) lists them, and each cell keeps its value's group, so
             # an average compares models only within one group.
+            # Joined rows across sources count as one setting (null comparable group).
             groups = sorted({str(row.get("comparable_group")) for row in rows})
-            benchmark = {
-                "key": record_key,
-                "direction": direction if direction in DIRECTIONS else None,
-                "multiplier": multiplier,
-                "percent": percent,
-                "unit": _unit_label(series, percent),
-            }
-            if len(groups) > 1:
+            if not is_joined and len(groups) > 1:
                 benchmark["groups"] = groups
-            benchmarks.append(benchmark)
+
             for row in rows:
                 identity = (
                     (row.get("organization") or "").lower(),
@@ -152,14 +220,20 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
                 else:
                     columns.setdefault(model, (base, None))
                 value = round(row["value"] * multiplier, 4)
-                group = groups.index(str(row.get("comparable_group"))) if len(groups) > 1 else None
+                group = (
+                    None
+                    if is_joined or len(groups) <= 1
+                    else groups.index(str(row.get("comparable_group")))
+                )
                 cell = cells.setdefault(model, {}).get(index)
                 if cell is None:
-                    cells[model][index] = [value, 1, group]
+                    cells[model][index] = [value, 1, group, source, record_key, is_joined]
                 else:
                     cell[1] += 1
-                    if _better(direction, value, cell[0]):
-                        cell[0], cell[2] = value, group
+                    if is_joined:
+                        cell[5] = True
+                    if _better(benchmark["direction"], value, cell[0]):
+                        cell[0], cell[2], cell[3], cell[4] = value, group, source, record_key
                 reported = row.get("reported_date") or row.get("reported_at") or ""
                 current = dates.setdefault(model, {}).get(source)
                 if reported and (current is None or reported > current[0]):
@@ -173,15 +247,26 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
             # {source: [latest date, what the date is]}
             "dates": dict(sorted(dates.get(key, {}).items())),
             # [benchmark index, display value], then the row count when several
-            # settings were reported or the record has comparable groups, then
-            # the index of the value's group in that record's "groups".
+            # settings were reported or the record has comparable groups. Joined
+            # rows across sources append source and record key.
             "scores": [
-                [index, value]
-                if count == 1 and group is None
-                else [index, value, count]
-                if group is None
-                else [index, value, count, group]
-                for index, (value, count, group) in sorted(cells[key].items())
+                (
+                    [index, value]
+                    if count == 1 and group is None
+                    else [index, value, count]
+                    if group is None
+                    else [index, value, count, group]
+                )
+                if not is_joined
+                else [index, value, count, group, source, record_key]
+                for index, (
+                    value,
+                    count,
+                    group,
+                    source,
+                    record_key,
+                    is_joined,
+                ) in sorted(cells[key].items())
             ],
         }
         for key in sorted(cells)

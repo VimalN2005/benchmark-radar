@@ -6421,7 +6421,9 @@ function modelMatrixModels(records, payload) {
       const [date, datePrecision] = modelLatestDate(dates);
       const cells = new Map(entry.scores
         .filter(([index]) => recordKeys.has(keys[index]))
-        .map(([index, value, count = 1, group = null]) => [keys[index], { value, count, group }]));
+        .map(([index, value, count = 1, group = null, source = null, recordKey = null]) => [keys[index], {
+          value, count, group, ...(source ? { source } : {}), ...(recordKey ? { recordKey } : {}),
+        }]));
       return {
         key: entry.key, name: entry.model, organization: entry.organization || MODEL_UNRECORDED,
         sourceModelId: entry.source_model_id || "", dates, date, datePrecision, family, configuration, cells,
@@ -6487,7 +6489,7 @@ function modelsFromSource(models, source, recordsByKey) {
   return models
     .map((model) => {
       // The date shown and sorted on is this source's, not another's.
-      const cells = new Map([...model.cells].filter(([key]) => recordsByKey.get(key)?.source === source));
+      const cells = new Map([...model.cells].filter(([key, cell]) => (cell.source || recordsByKey.get(key)?.source) === source));
       let [date, datePrecision] = modelLatestDate(model.dates || {}, source);
       // Fallback models carry dates on their cells instead.
       for (const cell of cells.values()) if (cell.date && cell.date > date) [date, datePrecision] = [cell.date, cell.precision];
@@ -6590,6 +6592,7 @@ function modelCell(model, record, benchmark) {
   }
   const unscaled = cell.value !== null && modelAverageValue(cell.value, benchmark) === null;
   const selected = state.modelsPanel?.model === model.key && state.modelsPanel?.record === record.key;
+  const source = cell.source || record.source;
   return element("td", {}, [element("button", {
     className: `models-cell${unscaled ? " models-cell-unscaled" : ""}`,
     attrs: {
@@ -6601,6 +6604,7 @@ function modelCell(model, record, benchmark) {
     },
   }, [
     element("span", { text: modelValueText(cell.value, benchmark) }),
+    source ? element("span", { className: "models-source", text: scoreSourceLabel(source) }) : null,
     unscaled ? element("span", { className: "models-cell-note", text: t("not averaged"), attrs: { title: t("Not on a 0–100 scale, so it is shown but left out of averages") } }) : null,
     cell.count > 1 ? element("span", { className: "models-cell-note", text: t("best of {n} settings", { n: cell.count }) }) : null,
   ])]);
@@ -6754,67 +6758,87 @@ function openModelPanel(model, record, data) {
       replaceChildren(body, [element("p", { className: "empty-state", text: t("Score details could not be loaded.") })]);
       return;
     }
-    // The record's own series decides scale and direction, so the panel is
-    // right even when model-scores.json did not load.
-    const scale = modelSeriesScale(shard.scores_by_source?.[record.source]?.series);
-    const { multiplier } = scale;
-    // Splits are per source, as model_scores.build_model_scores decides them:
-    // a split column's cells all come from the source that split the label.
-    const splitLabels = new Set(data.models.filter((entry) => entry.sourceModelId).map((entry) => {
-      const source = data.recordsByKey.get([...entry.cells.keys()][0])?.source;
-      return `${source}\u0000${entry.organization.toLowerCase()}\u0000${entry.name.toLowerCase()}`;
-    }));
-    const { mine, best, lead, own, name } = modelPanelRows(shard, model, data.scored, scale.direction, splitLabels);
-    const display = (row) => modelValueText(typeof row.value === "number" ? row.value * multiplier : null, scale);
-    const top = best.sort((a, b) => (scale.direction === "lower_is_better" ? a.value - b.value : b.value - a.value)).slice(0, 10);
-    if (!top.some(own) && lead) top.push(lead);
-    // Longer is better either way. Higher-is-better bars are the value on its
-    // scale. Lower-is-better bars are the best score's ratio to each value, so
-    // the winning 5.81 is full, a 9.76 is 60%, and near-equal scores draw
-    // near-equal bars rather than an inflated gap. A best score at or below 0
-    // has no meaningful ratio; only then do bars run from the worst shown
-    // score (shortest, still visible) to the best, so a winning 0 does not
-    // erase the rest.
-    const lower = scale.direction === "lower_is_better";
-    const extent = Math.max(scale.percent ? 100 / multiplier : 0, ...top.map((row) => Math.abs(row.value)), 1e-9);
-    const lowest = Math.min(...top.map((row) => row.value));
-    const highest = Math.max(...top.map((row) => row.value));
-    const lowerShare = (row) => {
-      if (lowest > 0) return lowest / row.value;
-      return highest === lowest ? 1 : 0.1 + 0.9 * ((highest - row.value) / (highest - lowest));
+    const renderPanel = (allShard) => {
+      if (state.modelsPanel?.model !== model.key || state.modelsPanel?.record !== record.key) return;
+      // The record's own series decides scale and direction, so the panel is
+      // right even when model-scores.json did not load.
+      const scale = modelSeriesScale(allShard.scores_by_source?.[record.source]?.series || Object.values(allShard.scores_by_source || {})[0]?.series);
+      const { multiplier } = scale;
+      // Splits are per source, as model_scores.build_model_scores decides them:
+      // a split column's cells all come from the source that split the label.
+      const splitLabels = new Set(data.models.filter((entry) => entry.sourceModelId).map((entry) => {
+        const source = data.recordsByKey.get([...entry.cells.keys()][0])?.source;
+        return `${source}\u0000${entry.organization.toLowerCase()}\u0000${entry.name.toLowerCase()}`;
+      }));
+      const { mine, best, lead, own, name } = modelPanelRows(allShard, model, data.scored, scale.direction, splitLabels);
+      const display = (row) => modelValueText(typeof row.value === "number" ? row.value * multiplier : null, scale);
+      const top = best.sort((a, b) => (scale.direction === "lower_is_better" ? a.value - b.value : b.value - a.value)).slice(0, 10);
+      if (!top.some(own) && lead) top.push(lead);
+      // Longer is better either way. Higher-is-better bars are the value on its
+      // scale. Lower-is-better bars are the best score's ratio to each value, so
+      // the winning 5.81 is full, a 9.76 is 60%, and near-equal scores draw
+      // near-equal bars rather than an inflated gap. A best score at or below 0
+      // has no meaningful ratio; only then do bars run from the worst shown
+      // score (shortest, still visible) to the best, so a winning 0 does not
+      // erase the rest.
+      const lower = scale.direction === "lower_is_better";
+      const extent = Math.max(scale.percent ? 100 / multiplier : 0, ...top.map((row) => Math.abs(row.value)), 1e-9);
+      const lowest = Math.min(...top.map((row) => row.value));
+      const highest = Math.max(...top.map((row) => row.value));
+      const lowerShare = (row) => {
+        if (lowest > 0) return lowest / row.value;
+        return highest === lowest ? 1 : 0.1 + 0.9 * ((highest - row.value) / (highest - lowest));
+      };
+      const share = (row) => (lower ? lowerShare(row) : Math.abs(row.value) / extent);
+      replaceChildren(body, [
+        element("h3", { text: t("Scores for this model") }),
+        element("ul", { className: "models-panel-scores" }, mine.map((row) => element("li", {}, [
+          element("strong", { text: display(row) }),
+          element("span", { text: [
+            scoreSourceLabel(row.source),
+            modelRowSetting(row) || t("Setting not recorded"),
+            row.reported_date || row.reported_at
+              ? t(MODEL_DATE_LABELS[row.date_precision] || "dated {date}", { date: formatDate(row.reported_date || row.reported_at, { dateStyle: "medium" }) })
+              : t("Date unknown"),
+            row.measured_by && row.measured_by !== model.organization ? t("measured by {who}", { who: row.measured_by }) : null,
+          ].filter(Boolean).join(" · ") }),
+          // Crawled URLs are not scheme-checked upstream; only http(s) becomes a link.
+          safeHttpUrl(row.source_url) ? element("a", {
+            text: row.source_title || scoreSourceLabel(row.source),
+            attrs: { href: safeHttpUrl(row.source_url), target: "_blank", rel: "noopener noreferrer" },
+          }) : null,
+        ]))),
+        element("p", { className: "models-col-facts", text: scale.percent
+          ? t("0–100 scale; counts in shared-benchmark averages.")
+          : t("Not on a 0–100 scale; shown, left out of averages.") }),
+        element("h3", { text: t("Top models on this record") }),
+        lead && modelRowSetting(lead) ? element("p", { className: "models-col-facts", text: t("Same setting only: {setting}", { setting: modelRowSetting(lead) }) }) : null,
+        element("ol", { className: "models-panel-chart" }, top.map((row) => element("li", { className: own(row) ? "is-selected" : "" }, [
+          element("span", { className: "models-panel-model", text: name(row) }),
+          element("span", { className: "models-panel-bar", attrs: { style: `--share:${Math.max(0, Math.min(1, share(row))).toFixed(3)}` } }),
+          element("span", { className: "models-panel-value", text: display(row) }),
+        ]))),
+        // Below the figure, as principle.md places a chart's notes.
+        lower ? element("p", { className: "models-col-facts", text: t("Lower is better: the longest bar is the lowest score.") }) : null,
+        element("a", { text: t("Open the benchmark page"), attrs: { href: `/benchmarks/${record.slug}/` } }),
+      ]);
     };
-    const share = (row) => (lower ? lowerShare(row) : Math.abs(row.value) / extent);
-    replaceChildren(body, [
-      element("h3", { text: t("Scores for this model") }),
-      element("ul", { className: "models-panel-scores" }, mine.map((row) => element("li", {}, [
-        element("strong", { text: display(row) }),
-        element("span", { text: [
-          modelRowSetting(row) || t("Setting not recorded"),
-          row.reported_date || row.reported_at
-            ? t(MODEL_DATE_LABELS[row.date_precision] || "dated {date}", { date: formatDate(row.reported_date || row.reported_at, { dateStyle: "medium" }) })
-            : t("Date unknown"),
-          row.measured_by && row.measured_by !== model.organization ? t("measured by {who}", { who: row.measured_by }) : null,
-        ].filter(Boolean).join(" · ") }),
-        // Crawled URLs are not scheme-checked upstream; only http(s) becomes a link.
-        safeHttpUrl(row.source_url) ? element("a", {
-          text: row.source_title || scoreSourceLabel(row.source),
-          attrs: { href: safeHttpUrl(row.source_url), target: "_blank", rel: "noopener noreferrer" },
-        }) : null,
-      ]))),
-      element("p", { className: "models-col-facts", text: scale.percent
-        ? t("0–100 scale; counts in shared-benchmark averages.")
-        : t("Not on a 0–100 scale; shown, left out of averages.") }),
-      element("h3", { text: t("Top models on this record") }),
-      lead && modelRowSetting(lead) ? element("p", { className: "models-col-facts", text: t("Same setting only: {setting}", { setting: modelRowSetting(lead) }) }) : null,
-      element("ol", { className: "models-panel-chart" }, top.map((row) => element("li", { className: own(row) ? "is-selected" : "" }, [
-        element("span", { className: "models-panel-model", text: name(row) }),
-        element("span", { className: "models-panel-bar", attrs: { style: `--share:${Math.max(0, Math.min(1, share(row))).toFixed(3)}` } }),
-        element("span", { className: "models-panel-value", text: display(row) }),
-      ]))),
-      // Below the figure, as principle.md places a chart's notes.
-      lower ? element("p", { className: "models-col-facts", text: t("Lower is better: the longest bar is the lowest score.") }) : null,
-      element("a", { text: t("Open the benchmark page"), attrs: { href: `/benchmarks/${record.slug}/` } }),
-    ]);
+    const equivSiblings = (shard.siblings || []).filter((s) => s.relation === "equivalent");
+    if (!equivSiblings.length) {
+      renderPanel(shard);
+      return;
+    }
+    Promise.all(equivSiblings.map((s) => loadBenchmarkShard(s.slug))).then((siblingShards) => {
+      const mergedScores = { ...(shard.scores_by_source || {}) };
+      for (const s of siblingShards) {
+        if (s?.scores_by_source) {
+          for (const [src, payload] of Object.entries(s.scores_by_source)) {
+            mergedScores[src] = payload;
+          }
+        }
+      }
+      renderPanel({ ...shard, scores_by_source: mergedScores });
+    });
   });
 }
 

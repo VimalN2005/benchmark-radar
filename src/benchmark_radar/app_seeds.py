@@ -987,6 +987,8 @@ def _model_seed_columns(
                 "value": score[1],
                 "count": score[2] if len(score) > 2 else 1,
                 "group": score[3] if len(score) > 3 else None,
+                "source": score[4] if len(score) > 4 else None,
+                "record_key": score[5] if len(score) > 5 else None,
             }
             for score in entry["scores"]
             if keys[score[0]] in records
@@ -1104,6 +1106,8 @@ def _model_matrix_seed(
                     continue
                 text = _model_value_text(cell["value"], benchmark)
                 unscaled = average_value(cell["value"], benchmark) is None
+                cell_source = cell.get("source") or record["source"]
+                source_label = SOURCE_LABELS.get(cell_source, cell_source)
                 cells += (
                     f'<td><button class="models-cell{" models-cell-unscaled" if unscaled else ""}" '
                     f'type="button" data-model="{esc(column["key"])}" '
@@ -1111,6 +1115,7 @@ def _model_matrix_seed(
                     'aria-pressed="false" '
                     f'aria-label="{esc(column["model"])} · {esc(record["name"])} · {esc(text)}">'
                     f"<span>{esc(text)}</span>"
+                    f'<span class="models-source">{esc(source_label)}</span>'
                     + (
                         '<span class="models-cell-note" title="Not on a 0–100 scale, so it is '
                         'shown but left out of averages">not averaged</span>'
