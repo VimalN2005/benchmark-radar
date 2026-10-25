@@ -6426,10 +6426,11 @@ function modelMatrixModels(records, payload) {
       const [date, datePrecision] = modelLatestDate(dates);
       const cells = new Map(entry.scores
         .filter(([index]) => recordKeys.has(keys[index]))
-        .map(([index, value, count = 1, group = null, source = null, recordKey = null, sources = null, percent = null]) => [keys[index], {
+        .map(([index, value, count = 1, group = null, source = null, recordKey = null, sources = null, percent = null, unit = null]) => [keys[index], {
           value, count, group, ...(source ? { source } : {}), ...(recordKey ? { recordKey } : {}),
           ...(sources ? { sources } : {}),
           ...(percent !== null ? { percent } : {}),
+          ...(unit !== null ? { unit } : {}),
         }]));
       return {
         key: entry.key, name: entry.model, organization: entry.organization || MODEL_UNRECORDED,
@@ -6499,7 +6500,7 @@ function modelsFromSource(models, source, recordsByKey) {
       const cells = new Map();
       for (const [key, cell] of model.cells) {
         if (cell.sources && cell.sources[source]) {
-          const [val, count, group, recordKey, percent] = cell.sources[source];
+          const [val, count, group, recordKey, percent, unit] = cell.sources[source];
           cells.set(key, {
             ...cell,
             value: val,
@@ -6508,6 +6509,7 @@ function modelsFromSource(models, source, recordsByKey) {
             source,
             recordKey,
             percent,
+            unit: unit ?? null,
             sources: { [source]: cell.sources[source] },
           });
         } else if ((cell.source || recordsByKey.get(key)?.source) === source) {
@@ -6617,6 +6619,13 @@ function modelCell(model, record, benchmark) {
   const unscaled = cell.value !== null && modelAverageValue(cell, benchmark) === null;
   const selected = state.modelsPanel?.model === model.key && state.modelsPanel?.record === record.key;
   const source = cell.source || record.source;
+  const cellScale = {
+    ...benchmark,
+    ...(cell.percent !== undefined ? { percent: cell.percent } : {}),
+    ...(cell.percent === false && (!cell.unit || cell.unit === "%") ? { unit: null } : {}),
+    ...(cell.unit ? { unit: cell.unit } : {}),
+  };
+  const valText = cell.value === null ? t("Score on record") : modelValueText(cell.value, cellScale);
   return element("td", {}, [element("button", {
     className: `models-cell${unscaled ? " models-cell-unscaled" : ""}`,
     attrs: {
@@ -6624,10 +6633,10 @@ function modelCell(model, record, benchmark) {
       "data-model": model.key,
       "data-record": record.key,
       "aria-pressed": String(selected),
-      "aria-label": `${model.name} · ${record.name} · ${cell.value === null ? t("Score on record") : modelValueText(cell.value, benchmark)}`,
+      "aria-label": `${model.name} · ${record.name} · ${valText}`,
     },
   }, [
-    element("span", { text: modelValueText(cell.value, benchmark) }),
+    element("span", { text: valText }),
     source ? element("span", { className: "models-source", text: scoreSourceLabel(source) }) : null,
     unscaled ? element("span", { className: "models-cell-note", text: t("not averaged"), attrs: { title: t("Not on a 0–100 scale, so it is shown but left out of averages") } }) : null,
     cell.count > 1 ? element("span", { className: "models-cell-note", text: t("best of {n} settings", { n: cell.count }) }) : null,
@@ -6721,12 +6730,18 @@ function modelPanelRows(shard, model, scored, direction, splitLabels = new Set()
   // A label the source files under several checkpoint IDs (GPT-4o's May and
   // August IDs) is one chart entry per ID, as it is one column per ID.
   const label = (row) => `${(row.organization || "").toLowerCase()}\u0000${(row.model_name || "").toLowerCase()}`;
-  const ids = new Map();
-  for (const row of rows) if (row.model_id) ids.set(label(row), new Set([...(ids.get(label(row)) || []), row.model_id]));
-  const identity = (row) => (ids.get(label(row))?.size > 1 ? `${label(row)}\u0000${row.model_id}` : label(row));
+  const idsBySource = new Map();
+  for (const row of rows) {
+    if (row.model_id) {
+      const srcKey = `${row.source}\u0000${label(row)}`;
+      idsBySource.set(srcKey, new Set([...(idsBySource.get(srcKey) || []), row.model_id]));
+    }
+  }
+  const isSplit = (row) => Boolean(row.model_id && (splitLabels.has(`${row.source}\u0000${label(row)}`) || idsBySource.get(`${row.source}\u0000${label(row)}`)?.size > 1));
+  const identity = (row) => (isSplit(row) ? `${label(row)}\u0000${row.model_id}` : label(row));
   const best = new Map();
   for (const row of rows) {
-    if (cohort !== null && row.comparable_group !== cohort) continue;
+    if ((row.comparable_group ?? null) !== cohort) continue;
     if (typeof row._normValue !== "number") continue;
     const id = identity(row);
     const current = best.get(id);
@@ -6739,8 +6754,7 @@ function modelPanelRows(shard, model, scored, direction, splitLabels = new Set()
   // files several under one label, so 88.7 and 85.7 say whose they are.
   // A label split anywhere in the corpus (splitLabels) is named by ID even on
   // a record where only one of its checkpoints reports.
-  const split = (row) => ids.get(label(row))?.size > 1 || splitLabels.has(`${row.source}\u0000${label(row)}`);
-  const name = (row) => (split(row) && row.model_id ? `${row.model_name} (${row.model_id})` : row.model_name);
+  const name = (row) => (isSplit(row) ? `${row.model_name} (${row.model_id})` : row.model_name);
   return { mine, best: [...best.values()], lead, own, name };
 }
 
@@ -6796,11 +6810,16 @@ function openModelPanel(model, record, data) {
       const { multiplier } = scale;
       // Splits are per source, as model_scores.build_model_scores decides them:
       // a split column's cells all come from the source that split the label.
-      const splitLabels = new Set(data.models.filter((entry) => entry.sourceModelId).map((entry) => {
-        const source = data.recordsByKey.get([...entry.cells.keys()][0])?.source;
-        return `${source}\u0000${entry.organization.toLowerCase()}\u0000${entry.name.toLowerCase()}`;
+      const splitLabels = new Set(data.models.filter((entry) => entry.sourceModelId).flatMap((entry) => {
+        const sources = new Set([
+          ...Object.keys(entry.dates || {}),
+          ...[...entry.cells.values()].map((c) => c.source).filter(Boolean),
+          ...[...entry.cells.keys()].map((k) => data.recordsByKey.get(k)?.source).filter(Boolean),
+        ]);
+        return [...sources].map((src) => `${src}\u0000${entry.organization.toLowerCase()}\u0000${entry.name.toLowerCase()}`);
       }));
       const { mine, best, lead, own, name } = modelPanelRows(allShard, model, data.scored, scale.direction, splitLabels);
+      const cell = model.cells?.get(record.key);
       const display = (row) => modelValueText(row._normValue ?? (typeof row.value === "number" ? row.value * multiplier : null), row._scale || scale);
       const top = best.sort((a, b) => (scale.direction === "lower_is_better" ? a._normValue - b._normValue : b._normValue - a._normValue)).slice(0, 10);
       if (!top.some(own) && lead) top.push(lead);
@@ -6838,7 +6857,7 @@ function openModelPanel(model, record, data) {
             attrs: { href: safeHttpUrl(row.source_url), target: "_blank", rel: "noopener noreferrer" },
           }) : null,
         ]))),
-        element("p", { className: "models-col-facts", text: scale.percent
+        element("p", { className: "models-col-facts", text: (lead?._scale?.percent ?? (cell?.percent !== undefined ? cell.percent : scale.percent))
           ? t("0–100 scale; counts in shared-benchmark averages.")
           : t("Not on a 0–100 scale; shown, left out of averages.") }),
         element("h3", { text: t("Top models on this record") }),

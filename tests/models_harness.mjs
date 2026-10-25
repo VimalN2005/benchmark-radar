@@ -644,5 +644,114 @@ const panelScoresText = byId("models-panel").querySelector("ul.models-panel-scor
 assert(panelScoresText.includes("LLM Stats") && panelScoresText.includes("Model reports"));
 assert(panelScoresText.includes("50%") && panelScoresText.includes("55%"));
 
+// Source filter on joined record switches to that source's score and narrows coverage
+const multiSourcePayload = {
+  schema_version: 1,
+  benchmarks: [
+    { key: "llm-stats:hle", direction: "higher_is_better", multiplier: 100, percent: true, unit: "%" },
+  ],
+  models: [
+    {
+      key: "acme-1",
+      model: "Acme-1",
+      organization: "Acme",
+      dates: { llm_stats: ["2026-01-01", "model_announcement"], model_reports: ["2026-02-01", "document_publication"] },
+      scores: [
+        [0, 55, 2, null, "model_reports", "model-reports:hle", {
+          llm_stats: [50, 1, null, "llm-stats:hle", true, "%"],
+          model_reports: [55, 1, null, "model-reports:hle", true, "%"],
+        }, true, "%"],
+      ],
+    },
+    {
+      key: "beta-1",
+      model: "Beta-1",
+      organization: "Beta",
+      dates: { model_reports: ["2026-02-01", "document_publication"] },
+      scores: [
+        [0, 60, 1, null, "model_reports", "model-reports:hle", {
+          model_reports: [60, 1, null, "model-reports:hle", true, "%"],
+        }, true, "%"],
+      ],
+    },
+  ],
+};
+reset(multiSourcePayload);
+state.benchmarkIndex = joinedRecords;
+state.modelsSource = "llm_stats";
+models.renderModels();
+const filteredCells = byId("models-list").querySelectorAll("button.models-cell");
+assert.equal(filteredCells.length, 1);
+assert.equal(filteredCells[0].querySelector("span").textContent, "50%");
+assert.equal(filteredCells[0].querySelector("span.models-source").textContent, "LLM Stats");
+// Beta-1 has no scores in llm_stats, so it is filtered out of columns
+const tableHeader = byId("models-list").querySelector("thead").textContent;
+assert(tableHeader.includes("Acme-1") && !tableHeader.includes("Beta-1"));
+state.modelsSource = "";
+
+// Mixed multipliers across joined sources: 100 and 1 must not format as 2160%
+shards.set("llm-stats-hle", {
+  siblings: [{ key: "model-reports:hle", slug: "model-reports-hle", name: "HLE", source: "model_reports", relation: "equivalent" }],
+  scores_by_source: {
+    llm_stats: {
+      series: { declared_max: 1, direction: "higher_is_better", score_summary: { display_multiplier: 100, raw_max: 0.6 } },
+      rows: [{ model_name: "Acme-1", organization: "Acme", value: 0.216, source: "llm_stats" }],
+    },
+  },
+});
+shards.set("model-reports-hle", {
+  siblings: [{ key: "llm-stats:hle", slug: "llm-stats-hle", name: "HLE", source: "llm_stats", relation: "equivalent" }],
+  scores_by_source: {
+    model_reports: {
+      series: { direction: "higher_is_better", score_summary: { display_multiplier: 1, unit: "percent" } },
+      rows: [
+        { model_name: "Acme-1", organization: "Acme", value: 21.6, source: "model_reports" },
+        { model_name: "Top-1", organization: "Other", value: 45.0, source: "model_reports" },
+      ],
+    },
+  },
+});
+reset(multiSourcePayload);
+state.benchmarkIndex = joinedRecords;
+models.renderModels();
+byId("models-list").querySelector('button.models-cell[data-model="acme-1"]').click();
+await tick();
+await tick();
+const panelContent = byId("models-panel").textContent;
+assert(!panelContent.includes("2160%"), "Multiplier mismatch caused 2160%");
+assert.match(panelContent, /21\.6%/);
+
+// Protocol-less rows only rank against protocol-less rows, and multi-source models are not duplicated or shown with internal IDs
+shards.set("model-reports-hle", {
+  siblings: [{ key: "llm-stats:hle", slug: "llm-stats-hle", name: "HLE", source: "llm_stats", relation: "equivalent" }],
+  scores_by_source: {
+    model_reports: {
+      series: { direction: "higher_is_better", score_summary: { display_multiplier: 1, unit: "percent" } },
+      rows: [
+        { model_name: "Acme-1", organization: "Acme", value: 21.6, source: "model_reports", model_id: '["Acme","Acme-1"]', comparable_group: null },
+        { model_name: "DeepSeek-V4", organization: "DeepSeek", value: 80.0, source: "model_reports", model_id: '["DeepSeek","DeepSeek-V4"]', comparable_group: null },
+        { model_name: "Tool-Runner", organization: "Other", value: 95.0, source: "model_reports", comparable_group: "with-tools" },
+      ],
+    },
+    llm_stats: {
+      series: { direction: "higher_is_better", score_summary: { display_multiplier: 1, unit: "percent" } },
+      rows: [
+        { model_name: "Acme-1", organization: "Acme", value: 22.0, source: "llm_stats", model_id: "acme-1-id", comparable_group: null },
+        { model_name: "DeepSeek-V4", organization: "DeepSeek", value: 82.0, source: "llm_stats", model_id: "deepseek-v4-id", comparable_group: null },
+      ],
+    },
+  },
+});
+byId("models-list").querySelector('button.models-cell[data-model="acme-1"]').click();
+await tick();
+await tick();
+const chartItems = byId("models-panel").querySelector("ol.models-panel-chart").querySelectorAll("li");
+const chartNames = chartItems.map((li) => li.querySelector("span.models-panel-model").textContent);
+// Tool-Runner with comparable_group: "with-tools" must NOT appear when selected model has cohort: null
+assert(!chartNames.includes("Tool-Runner"));
+// DeepSeek-V4 must appear only once (no duplicate entry across sources) and without raw model_id
+assert.equal(chartNames.filter((name) => name.startsWith("DeepSeek-V4")).length, 1);
+assert(!chartNames.some((name) => name.includes('["DeepSeek"')));
+
 console.log("Models matrix, shared-benchmark average rules, #862 defects, and #904 joined records passed.");
 

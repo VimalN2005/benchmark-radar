@@ -991,6 +991,7 @@ def _model_seed_columns(
                 "record_key": score[5] if len(score) > 5 else None,
                 "sources": score[6] if len(score) > 6 else None,
                 "percent": score[7] if len(score) > 7 else None,
+                "unit": score[8] if len(score) > 8 else None,
             }
             for score in entry["scores"]
             if keys[score[0]] in records
@@ -1107,7 +1108,17 @@ def _model_matrix_seed(
                         'aria-label="No reported score">—</span></td>'
                     )
                     continue
-                text = _model_value_text(cell["value"], benchmark)
+                cell_scale = {
+                    **benchmark,
+                    **({"percent": cell["percent"]} if cell.get("percent") is not None else {}),
+                    **(
+                        {"unit": None}
+                        if cell.get("percent") is False and benchmark.get("unit") == "%"
+                        else {}
+                    ),
+                    **({"unit": cell["unit"]} if cell.get("unit") else {}),
+                }
+                text = _model_value_text(cell["value"], cell_scale)
                 unscaled = average_value(cell["value"], benchmark, cell.get("percent")) is None
                 cell_source = cell.get("source") or record["source"]
                 source_label = SOURCE_LABELS.get(cell_source, cell_source)

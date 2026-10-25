@@ -226,14 +226,21 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
                     if cg is not None and str(cg) in benchmark["groups"]
                     else None
                 )
+                unit = _unit_label(series, percent)
                 src_map = cells.setdefault(model, {}).setdefault(index, {})
                 obs = src_map.get(source)
                 if obs is None:
-                    src_map[source] = [value, 1, group, record_key, percent]
+                    src_map[source] = [value, 1, group, record_key, percent, unit]
                 else:
                     obs[1] += 1
                     if _better(direction, value, obs[0]):
-                        obs[0], obs[2], obs[3], obs[4] = value, group, record_key, percent
+                        obs[0], obs[2], obs[3], obs[4], obs[5] = (
+                            value,
+                            group,
+                            record_key,
+                            percent,
+                            unit,
+                        )
 
                 reported = row.get("reported_date") or row.get("reported_at") or ""
                 current = dates.setdefault(model, {}).get(source)
@@ -254,7 +261,7 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
             "dates": dict(sorted(dates.get(key, {}).items())),
             # [benchmark index, display value], then the row count when several
             # settings were reported or the record has comparable groups. Joined
-            # rows across sources append source, record key, per-source dict, and percent.
+            # rows across sources append source, record key, per-source dict, percent, and unit.
             "scores": [
                 _serialize_cell(
                     index,
@@ -283,7 +290,7 @@ def _serialize_cell(
         if direction == "lower_is_better"
         else max(src_map, key=lambda s: src_map[s][0])
     )
-    val, cnt, grp, rkey, pct = src_map[winning_source]
+    val, cnt, grp, rkey, pct, unit = src_map[winning_source]
     total_count = sum(obs[1] for obs in src_map.values())
     if not is_joined:
         if total_count == 1 and grp is None:
@@ -292,8 +299,10 @@ def _serialize_cell(
             return [index, val, total_count]
         return [index, val, total_count, grp]
 
-    sources_dict = {s: [obs[0], obs[1], obs[2], obs[3], obs[4]] for s, obs in src_map.items()}
-    return [index, val, total_count, grp, winning_source, rkey, sources_dict, pct]
+    sources_dict = {
+        s: [obs[0], obs[1], obs[2], obs[3], obs[4], obs[5]] for s, obs in src_map.items()
+    }
+    return [index, val, total_count, grp, winning_source, rkey, sources_dict, pct, unit]
 
 
 # What a column's date is: aggregators date a score by the model's
