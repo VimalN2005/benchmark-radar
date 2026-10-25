@@ -989,6 +989,8 @@ def _model_seed_columns(
                 "group": score[3] if len(score) > 3 else None,
                 "source": score[4] if len(score) > 4 else None,
                 "record_key": score[5] if len(score) > 5 else None,
+                "sources": score[6] if len(score) > 6 else None,
+                "percent": score[7] if len(score) > 7 else None,
             }
             for score in entry["scores"]
             if keys[score[0]] in records
@@ -1052,6 +1054,7 @@ def _model_matrix_seed(
         [{key: cell["value"] for key, cell in column["cells"].items()} for column in columns],
         benchmarks,
         [{key: cell["group"] for key, cell in column["cells"].items()} for column in columns],
+        [{key: cell.get("percent") for key, cell in column["cells"].items()} for column in columns],
     )
     ranked = sorted((mean for mean in means if mean is not None), reverse=True)
     note = (
@@ -1105,7 +1108,7 @@ def _model_matrix_seed(
                     )
                     continue
                 text = _model_value_text(cell["value"], benchmark)
-                unscaled = average_value(cell["value"], benchmark) is None
+                unscaled = average_value(cell["value"], benchmark, cell.get("percent")) is None
                 cell_source = cell.get("source") or record["source"]
                 source_label = SOURCE_LABELS.get(cell_source, cell_source)
                 cells += (

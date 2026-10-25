@@ -175,7 +175,6 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
             multiplier, percent = score_scale(series)
             direction = series.get("direction")
             target_key = canonical_map.get(record_key, record_key)
-            is_joined = target_key in canonical_map
 
             if target_key not in benchmark_indices:
                 index = len(benchmarks)
@@ -186,6 +185,7 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
                     "multiplier": multiplier,
                     "percent": percent,
                     "unit": _unit_label(series, percent),
+                    "groups": [],
                 }
                 benchmarks.append(benchmark)
             else:
@@ -197,13 +197,13 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
                     benchmark["unit"] = _unit_label(series, percent)
                     benchmark["multiplier"] = multiplier
 
-            # A record whose rows fall in several comparable groups (protocols,
-            # scaffolds) lists them, and each cell keeps its value's group, so
-            # an average compares models only within one group.
-            # Joined rows across sources count as one setting (null comparable group).
-            groups = sorted({str(row.get("comparable_group")) for row in rows})
-            if not is_joined and len(groups) > 1:
-                benchmark["groups"] = groups
+            # Collect comparable groups on the benchmark
+            for row in rows:
+                cg = row.get("comparable_group")
+                if cg is not None:
+                    scg = str(cg)
+                    if scg not in benchmark["groups"]:
+                        benchmark["groups"].append(scg)
 
             for row in rows:
                 identity = (
@@ -220,24 +220,30 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
                 else:
                     columns.setdefault(model, (base, None))
                 value = round(row["value"] * multiplier, 4)
+                cg = row.get("comparable_group")
                 group = (
-                    None
-                    if is_joined or len(groups) <= 1
-                    else groups.index(str(row.get("comparable_group")))
+                    benchmark["groups"].index(str(cg))
+                    if cg is not None and str(cg) in benchmark["groups"]
+                    else None
                 )
-                cell = cells.setdefault(model, {}).get(index)
-                if cell is None:
-                    cells[model][index] = [value, 1, group, source, record_key, is_joined]
+                src_map = cells.setdefault(model, {}).setdefault(index, {})
+                obs = src_map.get(source)
+                if obs is None:
+                    src_map[source] = [value, 1, group, record_key, percent]
                 else:
-                    cell[1] += 1
-                    if is_joined:
-                        cell[5] = True
-                    if _better(benchmark["direction"], value, cell[0]):
-                        cell[0], cell[2], cell[3], cell[4] = value, group, source, record_key
+                    obs[1] += 1
+                    if _better(direction, value, obs[0]):
+                        obs[0], obs[2], obs[3], obs[4] = value, group, record_key, percent
+
                 reported = row.get("reported_date") or row.get("reported_at") or ""
                 current = dates.setdefault(model, {}).get(source)
                 if reported and (current is None or reported > current[0]):
                     dates[model][source] = [reported, row.get("date_precision") or ""]
+
+    for benchmark in benchmarks:
+        if not benchmark.get("groups") or len(benchmark["groups"]) <= 1:
+            benchmark.pop("groups", None)
+
     models = [
         {
             "key": key,
@@ -248,30 +254,46 @@ def build_model_scores(shard_dir: Path) -> dict[str, Any]:
             "dates": dict(sorted(dates.get(key, {}).items())),
             # [benchmark index, display value], then the row count when several
             # settings were reported or the record has comparable groups. Joined
-            # rows across sources append source and record key.
+            # rows across sources append source, record key, per-source dict, and percent.
             "scores": [
-                (
-                    [index, value]
-                    if count == 1 and group is None
-                    else [index, value, count]
-                    if group is None
-                    else [index, value, count, group]
+                _serialize_cell(
+                    index,
+                    src_map,
+                    benchmarks[index],
+                    canonical_map,
                 )
-                if not is_joined
-                else [index, value, count, group, source, record_key]
-                for index, (
-                    value,
-                    count,
-                    group,
-                    source,
-                    record_key,
-                    is_joined,
-                ) in sorted(cells[key].items())
+                for index, src_map in sorted(cells[key].items())
             ],
         }
         for key in sorted(cells)
     ]
     return {"schema_version": SCHEMA_VERSION, "benchmarks": benchmarks, "models": models}
+
+
+def _serialize_cell(
+    index: int,
+    src_map: dict[str, list[Any]],
+    benchmark: dict[str, Any],
+    canonical_map: dict[str, str],
+) -> list[Any]:
+    is_joined = benchmark["key"] in canonical_map or len(src_map) > 1
+    direction = benchmark.get("direction")
+    winning_source = (
+        min(src_map, key=lambda s: src_map[s][0])
+        if direction == "lower_is_better"
+        else max(src_map, key=lambda s: src_map[s][0])
+    )
+    val, cnt, grp, rkey, pct = src_map[winning_source]
+    total_count = sum(obs[1] for obs in src_map.values())
+    if not is_joined:
+        if total_count == 1 and grp is None:
+            return [index, val]
+        if grp is None:
+            return [index, val, total_count]
+        return [index, val, total_count, grp]
+
+    sources_dict = {s: [obs[0], obs[1], obs[2], obs[3], obs[4]] for s, obs in src_map.items()}
+    return [index, val, total_count, grp, winning_source, rkey, sources_dict, pct]
 
 
 # What a column's date is: aggregators date a score by the model's
@@ -300,9 +322,14 @@ def write_model_scores(shard_dir: Path, output: Path = DEFAULT_SCORES_OUTPUT) ->
     return {"models": len(payload["models"]), "benchmarks": len(payload["benchmarks"])}
 
 
-def average_value(value: float, benchmark: dict[str, Any]) -> float | None:
+def average_value(
+    value: float,
+    benchmark: dict[str, Any],
+    cell_percent: bool | None = None,
+) -> float | None:
     """A display value on the 0-100 higher-is-better scale averages use, or None."""
-    if not benchmark.get("percent") or benchmark.get("direction") not in DIRECTIONS:
+    is_percent = cell_percent if cell_percent is not None else benchmark.get("percent")
+    if not is_percent or benchmark.get("direction") not in DIRECTIONS:
         return None
     return 100 - value if benchmark["direction"] == "lower_is_better" else value
 
@@ -316,6 +343,7 @@ def shared_average(
     columns: list[dict[str, float]],
     benchmarks: dict[str, dict[str, Any]],
     groups: list[dict[str, int | None]] | None = None,
+    percents: list[dict[str, bool | None]] | None = None,
 ) -> tuple[list[float | None], list[str]]:
     """Mean over the averageable benchmarks every column has a score on.
 
@@ -334,15 +362,26 @@ def shared_average(
         for key in columns[0]
         if all(key in column for column in columns)
         and len({(groups or [{}] * len(columns))[i].get(key) for i in range(len(columns))}) == 1
-        and average_value(columns[0][key], benchmarks.get(key) or {}) is not None
+        and all(
+            average_value(
+                columns[i][key],
+                benchmarks.get(key) or {},
+                (percents or [{}] * len(columns))[i].get(key),
+            )
+            is not None
+            for i in range(len(columns))
+        )
     )
     if not shared:
         return [None] * len(columns), []
     means: list[float | None] = []
-    for column in columns:
+    for i, column in enumerate(columns):
         total = 0.0
         for key in shared:
-            total += average_value(column[key], benchmarks[key])
+            pct = (percents or [{}] * len(columns))[i].get(key)
+            val = average_value(column[key], benchmarks[key], pct)
+            if val is not None:
+                total += val
         means.append(round_tenth(total / len(shared)))
     return means, shared
 

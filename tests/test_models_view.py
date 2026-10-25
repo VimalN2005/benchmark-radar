@@ -346,8 +346,30 @@ def test_equivalent_benchmarks_joined_across_scored_sources(tmp_path):
     models = payload["models"]
     assert len(models) == 2
     by_model = {m["model"]: m["scores"] for m in models}
-    assert by_model["Acme-1"] == [[0, 50.0, 1, None, "llm_stats", "llm-stats:hle"]]
-    assert by_model["Beta <1>"] == [[0, 60.0, 1, None, "model_reports", "model-reports:hle"]]
+    assert by_model["Acme-1"] == [
+        [
+            0,
+            50.0,
+            1,
+            None,
+            "llm_stats",
+            "llm-stats:hle",
+            {"llm_stats": [50.0, 1, None, "llm-stats:hle", True]},
+            True,
+        ]
+    ]
+    assert by_model["Beta <1>"] == [
+        [
+            0,
+            60.0,
+            1,
+            None,
+            "model_reports",
+            "model-reports:hle",
+            {"model_reports": [60.0, 1, None, "model-reports:hle", True]},
+            True,
+        ]
+    ]
 
     records = [
         {

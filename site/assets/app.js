@@ -6380,8 +6380,12 @@ function compareText(a, b) {
 //    is averaged, and lower-is-better scores are flipped (Elo, dollars and
 //    points out of 42 stay in their cells, out of the average);
 // 3. the page shows how many shared benchmarks each average uses.
-function modelAverageValue(value, benchmark) {
-  if (value === null || !benchmark?.percent || !MODEL_DIRECTIONS.includes(benchmark.direction)) return null;
+function modelAverageValue(cellOrValue, benchmark) {
+  const value = typeof cellOrValue === "object" && cellOrValue !== null ? cellOrValue.value : cellOrValue;
+  const isPercent = (typeof cellOrValue === "object" && cellOrValue !== null && cellOrValue.percent !== undefined)
+    ? cellOrValue.percent
+    : benchmark?.percent;
+  if (value === null || !isPercent || !MODEL_DIRECTIONS.includes(benchmark?.direction)) return null;
   return benchmark.direction === "lower_is_better" ? 100 - value : value;
 }
 
@@ -6392,12 +6396,13 @@ function modelSharedAverage(columns, benchmarks) {
   const shared = [...columns[0].keys()]
     // One comparable group across the columns: two protocols or scaffolds on
     // one record are not one benchmark.
-    .filter((key) => columns.every((cells) => cells.has(key) && (cells.get(key).group ?? null) === (columns[0].get(key).group ?? null))
-      && modelAverageValue(columns[0].get(key).value, benchmarks.get(key)) !== null)
+    .filter((key) => columns.every((cells) => cells.has(key)
+      && (cells.get(key).group ?? null) === (columns[0].get(key).group ?? null)
+      && modelAverageValue(cells.get(key), benchmarks.get(key)) !== null))
     .sort(compareText);
   if (!shared.length) return { means: columns.map(() => null), shared };
   const means = columns.map((cells) => {
-    const total = shared.reduce((sum, key) => sum + modelAverageValue(cells.get(key).value, benchmarks.get(key)), 0);
+    const total = shared.reduce((sum, key) => sum + modelAverageValue(cells.get(key), benchmarks.get(key)), 0);
     return Math.round(10 * (total / shared.length)) / 10;
   });
   return { means, shared };
@@ -6421,8 +6426,10 @@ function modelMatrixModels(records, payload) {
       const [date, datePrecision] = modelLatestDate(dates);
       const cells = new Map(entry.scores
         .filter(([index]) => recordKeys.has(keys[index]))
-        .map(([index, value, count = 1, group = null, source = null, recordKey = null]) => [keys[index], {
+        .map(([index, value, count = 1, group = null, source = null, recordKey = null, sources = null, percent = null]) => [keys[index], {
           value, count, group, ...(source ? { source } : {}), ...(recordKey ? { recordKey } : {}),
+          ...(sources ? { sources } : {}),
+          ...(percent !== null ? { percent } : {}),
         }]));
       return {
         key: entry.key, name: entry.model, organization: entry.organization || MODEL_UNRECORDED,
@@ -6489,7 +6496,24 @@ function modelsFromSource(models, source, recordsByKey) {
   return models
     .map((model) => {
       // The date shown and sorted on is this source's, not another's.
-      const cells = new Map([...model.cells].filter(([key, cell]) => (cell.source || recordsByKey.get(key)?.source) === source));
+      const cells = new Map();
+      for (const [key, cell] of model.cells) {
+        if (cell.sources && cell.sources[source]) {
+          const [val, count, group, recordKey, percent] = cell.sources[source];
+          cells.set(key, {
+            ...cell,
+            value: val,
+            count,
+            group,
+            source,
+            recordKey,
+            percent,
+            sources: { [source]: cell.sources[source] },
+          });
+        } else if ((cell.source || recordsByKey.get(key)?.source) === source) {
+          cells.set(key, cell);
+        }
+      }
       let [date, datePrecision] = modelLatestDate(model.dates || {}, source);
       // Fallback models carry dates on their cells instead.
       for (const cell of cells.values()) if (cell.date && cell.date > date) [date, datePrecision] = [cell.date, cell.precision];
@@ -6590,7 +6614,7 @@ function modelCell(model, record, benchmark) {
       element("span", { text: "—", attrs: { title: t("No reported score"), "aria-label": t("No reported score") } }),
     ]);
   }
-  const unscaled = cell.value !== null && modelAverageValue(cell.value, benchmark) === null;
+  const unscaled = cell.value !== null && modelAverageValue(cell, benchmark) === null;
   const selected = state.modelsPanel?.model === model.key && state.modelsPanel?.record === record.key;
   const source = cell.source || record.source;
   return element("td", {}, [element("button", {
@@ -6681,12 +6705,18 @@ function modelMatrixTable(columns, data, recordsByKey) {
 // model's best score: runs under another protocol or scaffold on the same
 // record are not one ordered comparison. Every row of the model is listed.
 function modelPanelRows(shard, model, scored, direction, splitLabels = new Set()) {
-  const rows = Object.values(shard?.scores_by_source || {}).flatMap((payload) => payload.rows || []);
-  const better = (a, b) => (direction === "lower_is_better" ? a.value < b.value : a.value > b.value);
+  const rows = Object.entries(shard?.scores_by_source || {}).flatMap(([src, payload]) => {
+    const scale = modelSeriesScale(payload?.series);
+    return (payload.rows || []).map((row) => {
+      const normValue = typeof row.value === "number" ? row.value * scale.multiplier : null;
+      return { ...row, source: row.source || src, _scale: scale, _normValue: normValue };
+    });
+  });
+  const better = (a, b) => (direction === "lower_is_better" ? a._normValue < b._normValue : a._normValue > b._normValue);
   const mine = rows.filter((row) => (row.model_name || "").toLowerCase() === model.name.toLowerCase()
     && (!scored || (row.organization || "").toLowerCase() === model.organization.toLowerCase())
     && (!model.sourceModelId || row.model_id === model.sourceModelId));
-  const lead = mine.filter((row) => typeof row.value === "number").reduce((top, row) => (!top || better(row, top) ? row : top), null);
+  const lead = mine.filter((row) => typeof row._normValue === "number").reduce((top, row) => (!top || better(row, top) ? row : top), null);
   const cohort = lead?.comparable_group ?? null;
   // A label the source files under several checkpoint IDs (GPT-4o's May and
   // August IDs) is one chart entry per ID, as it is one column per ID.
@@ -6697,7 +6727,7 @@ function modelPanelRows(shard, model, scored, direction, splitLabels = new Set()
   const best = new Map();
   for (const row of rows) {
     if (cohort !== null && row.comparable_group !== cohort) continue;
-    if (typeof row.value !== "number") continue;
+    if (typeof row._normValue !== "number") continue;
     const id = identity(row);
     const current = best.get(id);
     if (!current || better(row, current)) best.set(id, row);
@@ -6771,8 +6801,8 @@ function openModelPanel(model, record, data) {
         return `${source}\u0000${entry.organization.toLowerCase()}\u0000${entry.name.toLowerCase()}`;
       }));
       const { mine, best, lead, own, name } = modelPanelRows(allShard, model, data.scored, scale.direction, splitLabels);
-      const display = (row) => modelValueText(typeof row.value === "number" ? row.value * multiplier : null, scale);
-      const top = best.sort((a, b) => (scale.direction === "lower_is_better" ? a.value - b.value : b.value - a.value)).slice(0, 10);
+      const display = (row) => modelValueText(row._normValue ?? (typeof row.value === "number" ? row.value * multiplier : null), row._scale || scale);
+      const top = best.sort((a, b) => (scale.direction === "lower_is_better" ? a._normValue - b._normValue : b._normValue - a._normValue)).slice(0, 10);
       if (!top.some(own) && lead) top.push(lead);
       // Longer is better either way. Higher-is-better bars are the value on its
       // scale. Lower-is-better bars are the best score's ratio to each value, so
@@ -6782,14 +6812,14 @@ function openModelPanel(model, record, data) {
       // score (shortest, still visible) to the best, so a winning 0 does not
       // erase the rest.
       const lower = scale.direction === "lower_is_better";
-      const extent = Math.max(scale.percent ? 100 / multiplier : 0, ...top.map((row) => Math.abs(row.value)), 1e-9);
-      const lowest = Math.min(...top.map((row) => row.value));
-      const highest = Math.max(...top.map((row) => row.value));
+      const extent = Math.max(scale.percent ? 100 : 0, ...top.map((row) => Math.abs(row._normValue)), 1e-9);
+      const lowest = Math.min(...top.map((row) => row._normValue));
+      const highest = Math.max(...top.map((row) => row._normValue));
       const lowerShare = (row) => {
-        if (lowest > 0) return lowest / row.value;
-        return highest === lowest ? 1 : 0.1 + 0.9 * ((highest - row.value) / (highest - lowest));
+        if (lowest > 0) return lowest / row._normValue;
+        return highest === lowest ? 1 : 0.1 + 0.9 * ((highest - row._normValue) / (highest - lowest));
       };
-      const share = (row) => (lower ? lowerShare(row) : Math.abs(row.value) / extent);
+      const share = (row) => (lower ? lowerShare(row) : Math.abs(row._normValue) / extent);
       replaceChildren(body, [
         element("h3", { text: t("Scores for this model") }),
         element("ul", { className: "models-panel-scores" }, mine.map((row) => element("li", {}, [
@@ -6935,7 +6965,24 @@ function renderModels() {
     + t("{models} models with a reported score on {scored} of {total} benchmark records", {
       models: selection.length.toLocaleString(),
       // The selection's own coverage when narrowed, not every lab's.
-      scored: (narrowed ? new Set(selection.flatMap((model) => [...model.cells.keys()])).size : data.scoredRecords).toLocaleString(),
+      scored: (narrowed ? new Set(selection.flatMap((model) => {
+        const contributing = [];
+        for (const [key, cell] of model.cells) {
+          let found = false;
+          if (cell.sources) {
+            for (const obs of Object.values(cell.sources)) {
+              if (obs && obs[3]) {
+                contributing.push(obs[3]);
+                found = true;
+              }
+            }
+          }
+          if (!found) {
+            contributing.push(cell.recordKey || key);
+          }
+        }
+        return contributing;
+      })).size : data.scoredRecords).toLocaleString(),
       total: records.length.toLocaleString(),
     });
   // The lab's own model documents, when it has any: which benchmarks it chose
