@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 
 from benchmark_radar.app_pages import (
+    SATURATION_CARD,
+    SATURATION_CARD_ALT,
     AppPageError,
     load_category_colors,
     load_utility_seo,
@@ -306,6 +308,23 @@ def test_each_page_declares_the_url_it_is_served_at(tmp_path):
         assert f"<title>{esc(seo['title'])}</title>" in page, page_name
         assert f'<meta property="og:url" content="{SITE_URL}{path}">' in page
 
+
+
+def test_saturation_shares_its_own_card_and_every_other_route_the_site_card(tmp_path):
+    report = _write(tmp_path, _dashboard())
+    site_card = f"{SITE_URL}/assets/og-card.png"
+    for path in report["paths"]:
+        page = (tmp_path / path.strip("/") / "index.html").read_text(encoding="utf-8")
+        card = SATURATION_CARD if path == "/saturation/" else site_card
+        assert f'<meta property="og:image" content="{card}">' in page, path
+        assert f'<meta name="twitter:image" content="{card}">' in page, path
+        assert 'name="twitter:card" content="summary_large_image"' in page, path
+        assert 'property="og:image:width" content="1200"' in page, path
+        assert 'property="og:image:height" content="630"' in page, path
+    saturation = (tmp_path / "saturation" / "index.html").read_text(encoding="utf-8")
+    assert esc(SATURATION_CARD_ALT) in saturation
+    # The Organization schema names the site's own image, not the page's card.
+    assert f'"image": "{site_card}"' in saturation
 
 def test_only_the_named_view_is_open(tmp_path):
     _write(tmp_path, _dashboard())
