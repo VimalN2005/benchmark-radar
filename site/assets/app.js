@@ -4186,8 +4186,19 @@ function closeFiltersDrawer() {
 }
 
 // Missing activity stays inspectable, after records with measured signals.
+//
+// A GitHub Release record carries its repository's star count, copied onto
+// every version tag (sources.py fetches it from the repository endpoint). Those
+// stars measure the repository, not the release, so they do not rank the
+// release: summing them put an OpenClaw version tag with 391,191 repository
+// stars and 70 downloads above every benchmark in Past 30 days (issue #1001).
+// The release still ranks by its own downloads, and the card still shows the
+// repository's stars.
 function observationAttention(item) {
-  const values = ["stars", "likes", "downloads", "points"]
+  const repositoryStars =
+    item.source === "GitHub Release" || String(item.parser_version || "").startsWith("github-releases/");
+  const keys = repositoryStars ? ["likes", "downloads", "points"] : ["stars", "likes", "downloads", "points"];
+  const values = keys
     .map((key) => item.metrics?.[key])
     .filter((value) => typeof value === "number" && Number.isFinite(value) && value >= 0);
   return values.length ? values.reduce((sum, value) => sum + value, 0) : -1;
