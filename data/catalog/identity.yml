@@ -47,24 +47,16 @@ equivalent:
   # pair score-dense llm-stats records with identity-rich OpenCompass records.
   - group_id: gpqa
     basis: reviewer_asserted
-    members:
-      - llm-stats:gpqa
-      - opencompass:1135
-      - model-reports:gpqa
+    members: [llm-stats:gpqa, opencompass:1135]
     inherit_from: opencompass:1135
     anchors: [arxiv:2311.12022, gh:idavidrein/gpqa]
     reviewed_by: ktwu01
     reviewed_at: 2026-08-22
-    note: >-
-      llm-stats gpqa and OpenCompass 1135 are both GPQA (Rein et al., 2023).
-      model-reports:gpqa is the full GPQA instrument from model cards; Diamond is separated below.
+    note: llm-stats gpqa and OpenCompass 1135 are both GPQA (Rein et al., 2023).
 
   - group_id: mmlu-pro
     basis: reviewer_asserted
-    members:
-      - llm-stats:mmlu-pro
-      - opencompass:1276
-      - model-reports:mmlu_pro
+    members: [llm-stats:mmlu-pro, opencompass:1276]
     inherit_from: opencompass:1276
     anchors: [arxiv:2406.01574, gh:TIGER-AI-Lab/MMLU-Pro]
     reviewed_by: ktwu01
@@ -73,10 +65,7 @@ equivalent:
 
   - group_id: mmlu
     basis: reviewer_asserted
-    members:
-      - llm-stats:mmlu
-      - opencompass:498
-      - model-reports:mmlu
+    members: [llm-stats:mmlu, opencompass:498]
     inherit_from: opencompass:498
     anchors: [arxiv:2009.03300, gh:hendrycks/test]
     reviewed_by: ktwu01
@@ -85,10 +74,7 @@ equivalent:
 
   - group_id: livecodebench
     basis: reviewer_asserted
-    members:
-      - llm-stats:livecodebench
-      - opencompass:1413
-      - artificial-analysis:livecodebench
+    members: [llm-stats:livecodebench, opencompass:1413]
     inherit_from: opencompass:1413
     anchors: [arxiv:2403.07974, gh:LiveCodeBench/LiveCodeBench]
     reviewed_by: ktwu01
@@ -106,10 +92,7 @@ equivalent:
 
   - group_id: ifeval
     basis: reviewer_asserted
-    members:
-      - llm-stats:ifeval
-      - opencompass:1136
-      - model-reports:ifeval
+    members: [llm-stats:ifeval, opencompass:1136]
     inherit_from: opencompass:1136
     anchors: [arxiv:2311.07911, gh:google-research/google-research]
     reviewed_by: ktwu01
@@ -118,10 +101,7 @@ equivalent:
 
   - group_id: humaneval
     basis: reviewer_asserted
-    members:
-      - llm-stats:humaneval
-      - opencompass:537
-      - model-reports:humaneval
+    members: [llm-stats:humaneval, opencompass:537]
     inherit_from: opencompass:537
     anchors: [arxiv:2107.03374, gh:openai/human-eval]
     reviewed_by: ktwu01
@@ -130,10 +110,7 @@ equivalent:
 
   - group_id: mmmu
     basis: reviewer_asserted
-    members:
-      - llm-stats:mmmu
-      - opencompass:1248
-      - model-reports:mmmu
+    members: [llm-stats:mmmu, opencompass:1248]
     inherit_from: opencompass:1248
     anchors: [arxiv:2311.16502, gh:MMMU-Benchmark/MMMU]
     reviewed_by: ktwu01
@@ -142,10 +119,7 @@ equivalent:
 
   - group_id: gsm8k
     basis: reviewer_asserted
-    members:
-      - llm-stats:gsm8k
-      - opencompass:535
-      - model-reports:gsm8k
+    members: [llm-stats:gsm8k, opencompass:535]
     inherit_from: opencompass:535
     anchors: [arxiv:2110.14168, gh:openai/grade-school-math]
     reviewed_by: ktwu01
@@ -154,10 +128,7 @@ equivalent:
 
   - group_id: mathvista
     basis: reviewer_asserted
-    members:
-      - llm-stats:mathvista
-      - opencompass:1178
-      - model-reports:mathvista
+    members: [llm-stats:mathvista, opencompass:1178]
     inherit_from: opencompass:1178
     anchors: [arxiv:2310.02255, gh:lupantech/MathVista]
     reviewed_by: ktwu01
@@ -166,10 +137,7 @@ equivalent:
 
   - group_id: livebench
     basis: reviewer_asserted
-    members:
-      - llm-stats:livebench
-      - opencompass:1246
-      - model-reports:livebench
+    members: [llm-stats:livebench, opencompass:1246]
     inherit_from: opencompass:1246
     anchors: [arxiv:2406.19314, gh:livebench/livebench]
     reviewed_by: ktwu01
@@ -190,10 +158,7 @@ equivalent:
 
   - group_id: supergpqa
     basis: reviewer_asserted
-    members:
-      - llm-stats:supergpqa
-      - opencompass:1538
-      - model-reports:super_gpqa
+    members: [llm-stats:supergpqa, opencompass:1538]
     inherit_from: opencompass:1538
     anchors: [arxiv:2502.14739, gh:SuperGPQA/SuperGPQA]
     reviewed_by: ktwu01
@@ -202,10 +167,7 @@ equivalent:
 
   - group_id: mathvision
     basis: reviewer_asserted
-    members:
-      - llm-stats:mathvision
-      - opencompass:1370
-      - model-reports:mathvision
+    members: [llm-stats:mathvision, opencompass:1370]
     inherit_from: opencompass:1370
     anchors: [arxiv:2402.14804, gh:mathllm/MATH-V]
     reviewed_by: ktwu01
@@ -214,10 +176,7 @@ equivalent:
 
   - group_id: mbpp
     basis: reviewer_asserted
-    members:
-      - llm-stats:mbpp
-      - opencompass:538
-      - model-reports:mbpp
+    members: [llm-stats:mbpp, opencompass:538]
     inherit_from: opencompass:538
     anchors: [arxiv:2108.07732, gh:google-research/google-research]
     reviewed_by: ktwu01
@@ -226,10 +185,7 @@ equivalent:
 
   - group_id: drop
     basis: reviewer_asserted
-    members:
-      - llm-stats:drop
-      - opencompass:536
-      - model-reports:drop
+    members: [llm-stats:drop, opencompass:536]
     inherit_from: opencompass:536
     anchors: [arxiv:1903.00161, gh:allenai/allennlp-reading-comprehension]
     reviewed_by: ktwu01
@@ -301,117 +257,6 @@ equivalent:
     reviewed_by: lazizbekravshanov
     reviewed_at: 2026-09-12
     note: Both are VBench (Huang et al., 2023).
-
-  # Cross-source equivalent groups across scored sources for Models view (#904).
-  # Unreviewed candidates with published academic and repository anchors.
-  - group_id: humanitys-last-exam
-    members:
-      - "llm-stats:humanity's-last-exam"
-      - model-reports:hle
-      - artificial-analysis:humanitys-last-exam
-    anchors: [arxiv:2501.14249, gh:centerforaisafety/hle, hf:cais/hle]
-    note: Humanity's Last Exam (HLE) introduced by CAIS / Scale AI (Phan et al., 2025).
-
-  - group_id: gpqa-diamond
-    members:
-      - model-reports:gpqa_diamond
-      - artificial-analysis:gpqa-diamond
-    anchors: [arxiv:2311.12022, gh:idavidrein/gpqa]
-    note: Both records identify GPQA Diamond, the 198-question expert subset (Rein et al., 2023).
-
-  - group_id: mmmu-pro
-    members:
-      - llm-stats:mmmu-pro
-      - model-reports:mmmu_pro
-      - artificial-analysis:mmmu-pro
-    anchors: [arxiv:2409.02813, gh:MMMU-Benchmark/MMMU-Pro]
-    note: Both records identify MMMU-Pro (Yue et al., 2024).
-
-  - group_id: scicode
-    members:
-      - llm-stats:scicode
-      - model-reports:scicode
-      - artificial-analysis:scicode
-    anchors: [arxiv:2407.13168, gh:scicode-bench/SciCode]
-    note: SciCode research coding benchmark (Tian et al., 2024).
-
-  - group_id: ifbench
-    members:
-      - llm-stats:ifbench
-      - model-reports:ifbench
-      - artificial-analysis:ifbench
-    anchors: [arxiv:2502.04354, gh:niuzaisheng/IFBench]
-    note: IFBench instruction-following benchmark (Niu et al., 2025).
-
-  - group_id: swe-bench-verified
-    members:
-      - llm-stats:swe-bench-verified
-      - model-reports:swe_bench_verified
-    anchors: [arxiv:2404.04125, gh:princeton-nlp/SWE-bench]
-    note: SWE-bench Verified human-validated benchmark subset.
-
-  - group_id: swe-bench-pro
-    members:
-      - llm-stats:swe-bench-pro
-      - model-reports:swe_bench_pro
-    anchors: [arxiv:2409.03810, gh:princeton-nlp/SWE-bench]
-    note: SWE-bench Pro professional software engineering tasks.
-
-  - group_id: swe-bench-multilingual
-    members:
-      - llm-stats:swe-bench-multilingual
-      - model-reports:swe_bench_multilingual
-    anchors: [arxiv:2406.12879, gh:princeton-nlp/SWE-bench]
-    note: SWE-bench Multilingual programming benchmark.
-
-  - group_id: math-500
-    members:
-      - llm-stats:math-500
-      - model-reports:math_500
-    anchors: [arxiv:2103.03874, hf:HuggingFaceH4/MATH-500]
-    note: MATH-500 challenging math problem test subset.
-
-  - group_id: mmmlu
-    members:
-      - llm-stats:mmmlu
-      - model-reports:mmmlu
-    anchors: [arxiv:2404.14811, hf:openai/MMMLU]
-    note: Multilingual MMLU benchmark (OpenAI, 2024).
-
-  - group_id: simpleqa
-    members:
-      - llm-stats:simpleqa
-      - model-reports:simpleqa
-    anchors: [arxiv:2411.04368, gh:openai/simple-evals]
-    note: SimpleQA factual QA benchmark (OpenAI, 2024).
-
-  - group_id: osworld
-    members:
-      - llm-stats:osworld
-      - model-reports:osworld
-    anchors: [arxiv:2404.07972, gh:xlang-ai/OSWorld]
-    note: OSWorld multimodal desktop agent environment.
-
-  - group_id: arc-agi-2
-    members:
-      - llm-stats:arc-agi-v2
-      - model-reports:arc_agi_2
-    anchors: [arxiv:2412.04604, gh:fchollet/ARC-AGI]
-    note: ARC-AGI v2 abstraction and reasoning challenge.
-
-  - group_id: terminal-bench-hard
-    members:
-      - llm-stats:terminal-bench-hard
-      - artificial-analysis:terminal-bench-hard
-    anchors: [arxiv:2601.11868, gh:harbor-framework/terminal-bench]
-    note: Terminal-Bench Hard command-line reasoning tasks.
-
-  - group_id: terminal-bench-2-1
-    members:
-      - llm-stats:terminal-bench-2.1
-      - artificial-analysis:terminal-bench-v2.1
-    anchors: [arxiv:2601.11868, gh:harbor-framework/terminal-bench]
-    note: Terminal-Bench 2.1 command-line interaction benchmark.
 
 # Related, cross-linked, never merged. Two kinds share this block:
 #
