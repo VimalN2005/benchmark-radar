@@ -17,20 +17,25 @@ from datetime import date
 from pathlib import Path
 
 from generate_og_image import (
-    BACKGROUND,
+    BLUE,
+    CANVAS,
     DEFAULT_INDEX_PATH,
+    EDGE,
     HEIGHT,
-    INK,
-    LIGHT,
+    LINE,
     MARGIN,
-    SLATE,
-    TEAL,
-    TITLE_SIZE,
+    MUTED,
+    ORANGE,
+    PANEL,
+    SCALE,
+    SITE_INK,
     WIDTH,
     _assert_scalable_fonts,
     catalog_counts,
     font,
     load_index,
+    mono,
+    wordmark,
 )
 from PIL import Image, ImageDraw
 
@@ -54,23 +59,7 @@ def _date_position(value: str, first: date, span: int, left: int, width: int) ->
 
 
 def render(progression: dict, index: dict, output: Path) -> Path:
-    image = Image.new("RGB", (WIDTH, HEIGHT), BACKGROUND)
-    draw = ImageDraw.Draw(image)
-    draw.rectangle([0, 0, 12, HEIGHT], fill=TEAL)
-
-    title = font(TITLE_SIZE, bold=True)
-    subtitle = font(30)
-    body = font(22)
-    label = font(20, bold=True)
-    legend = font(21)
-
-    y = MARGIN - 12
-    draw.text((MARGIN, y), "Benchmark Radar", font=title, fill=INK)
-    y += 60
-    draw.text((MARGIN, y), "Where benchmark scores start to plateau", font=subtitle, fill=TEAL)
-    y += 55
-    draw.line([(MARGIN, y), (WIDTH - MARGIN, y)], fill=LIGHT, width=2)
-
+    """Lay the card out like the main one: words on the left, the chart on the right."""
     records = [
         progression["benchmarks"][benchmark_id]
         for benchmark_id in CHART_BENCHMARKS
@@ -78,61 +67,95 @@ def render(progression: dict, index: dict, output: Path) -> Path:
     ]
     if not records:
         raise ValueError("score progression contains no configured chart benchmarks")
+
+    s = SCALE
+    image = Image.new("RGB", (WIDTH * s, HEIGHT * s), CANVAS)
+    draw = ImageDraw.Draw(image)
+
+    # Left: what the page shows, in words a newcomer can repeat.
+    left = MARGIN * s
+    wordmark(draw, left, 56 * s, s=s)
+    headline = font(46 * s, bold=True)
+    for offset, line in enumerate(("Where benchmark", "scores start", "to plateau.")):
+        draw.text((left, (140 + offset * 58) * s), line, font=headline, fill=SITE_INK)
+    body = font(22 * s)
+    for offset, line in enumerate(("Best reported score over time,", "from cited model reports.")):
+        draw.text((left, (330 + offset * 32) * s), line, font=body, fill=MUTED)
+
+    benchmark_count, source_count = catalog_counts(index)
+    figure = font(40 * s, bold=True)
+    draw.text((left, 438 * s), f"{benchmark_count:,}", font=figure, fill=SITE_INK)
+    figure_width = draw.textlength(f"{benchmark_count:,}", font=figure)
+    draw.text(
+        (left + figure_width + 14 * s, 466 * s),
+        f"benchmark records from {source_count} sources",
+        font=font(19 * s),
+        fill=MUTED,
+        anchor="ls",
+    )
+    draw.line([(left, 520 * s), (left + 64 * s, 520 * s)], fill=ORANGE, width=4 * s)
+    draw.text((left, 548 * s), "benchmark-radar.org/saturation", font=mono(22 * s), fill=BLUE)
+
+    # Right: the score frontiers, in a panel like the main card's search box.
+    panel_left, panel_right = 600 * s, (WIDTH - 48) * s
+    panel_top, panel_bottom = 48 * s, (HEIGHT - 48) * s
+    draw.rounded_rectangle(
+        [panel_left, panel_top, panel_right, panel_bottom],
+        radius=14 * s,
+        fill=PANEL,
+        outline=EDGE,
+        width=s,
+    )
+    inner_left, inner_right = panel_left + 28 * s, panel_right - 28 * s
+    draw.text(
+        (inner_left, panel_top + 36 * s),
+        "Best reported score, %",
+        font=mono(15 * s),
+        fill=MUTED,
+        anchor="lm",
+    )
+    axis = mono(14 * s)
+    plot_left, plot_right = inner_left + 40 * s, inner_right
+    top, bottom = panel_top + 76 * s, panel_top + 364 * s
+    plot_width, plot_height = plot_right - plot_left, bottom - top
+    for value in (0, 25, 50, 75, 100):
+        grid_y = bottom - round(value / 100 * plot_height)
+        draw.line([(plot_left, grid_y), (plot_right, grid_y)], fill=LINE, width=s)
+        draw.text((plot_left - 10 * s, grid_y), str(value), font=axis, fill=MUTED, anchor="rm")
+
     first = min(date.fromisoformat(record["first_reported_at"]) for record in records)
     last = max(date.fromisoformat(record["last_reported_at"]) for record in records)
     span = max((last - first).days, 1)
-    left, right, top, bottom = MARGIN + 48, WIDTH - MARGIN - 10, y + 52, y + 260
-    plot_width, plot_height = right - left, bottom - top
-
-    for value in (0, 25, 50, 75, 100):
-        grid_y = bottom - round(value / 100 * plot_height)
-        draw.line([(left, grid_y), (right, grid_y)], fill=LIGHT, width=1)
-        draw.text((left - 14, grid_y), str(value), font=legend, fill=SLATE, anchor="ra")
-    draw.text((left - 48, top - 25), "%", font=label, fill=SLATE)
-
+    legend = font(17 * s)
     for position, record in enumerate(records):
-        points = record["historical_best_frontier"]["points"]
+        color = COLORS[position]
         xy = []
-        for point in points:
-            x = _date_position(point["reported_at"], first, span, left, plot_width)
+        for point in record["historical_best_frontier"]["points"]:
+            x = _date_position(point["reported_at"], first, span, plot_left, plot_width)
             value = max(0, min(100, float(point["value"])))
             xy.append((x, bottom - round(value / 100 * plot_height)))
         if len(xy) > 1:
-            draw.line(xy, fill=COLORS[position], width=5, joint="curve")
+            draw.line(xy, fill=color, width=4 * s, joint="curve")
         for x, point_y in xy:
-            draw.ellipse([x - 5, point_y - 5, x + 5, point_y + 5], fill=COLORS[position])
+            draw.ellipse([x - 5 * s, point_y - 5 * s, x + 5 * s, point_y + 5 * s], fill=color)
 
-        legend_x = MARGIN + position * 260
-        draw.ellipse([legend_x, bottom + 30, legend_x + 12, bottom + 42], fill=COLORS[position])
+        legend_x = inner_left + (position % 2) * 250 * s
+        legend_y = bottom + (62 + (position // 2) * 32) * s
+        draw.ellipse([legend_x, legend_y - 6 * s, legend_x + 12 * s, legend_y + 6 * s], fill=color)
         draw.text(
-            (legend_x + 22, bottom + 24),
+            (legend_x + 22 * s, legend_y),
             _short_name(record["benchmark_id"].replace("_", " ").title()),
             font=legend,
-            fill=INK,
+            fill=SITE_INK,
+            anchor="lm",
         )
 
-    draw.text((left, bottom + 70), first.strftime("%b %Y"), font=legend, fill=SLATE)
-    draw.text((right, bottom + 70), last.strftime("%b %Y"), font=legend, fill=SLATE, anchor="ra")
-    y = bottom + 112
-    draw.line([(MARGIN, y), (WIDTH - MARGIN, y)], fill=LIGHT, width=2)
-    y += 20
-    benchmark_count, source_count = catalog_counts(index)
+    draw.text((plot_left, bottom + 10 * s), first.strftime("%b %Y"), font=axis, fill=MUTED)
     draw.text(
-        (MARGIN, y),
-        f"{benchmark_count:,} benchmarks · {source_count} sources",
-        font=body,
-        fill=INK,
-    )
-    y += 30
-    draw.text((MARGIN, y), "Scores from cited model reports", font=body, fill=SLATE)
-    draw.text(
-        (WIDTH - MARGIN, y + 2),
-        "benchmark-radar.org/saturation",
-        font=font(19),
-        fill=TEAL,
-        anchor="ra",
+        (plot_right, bottom + 10 * s), last.strftime("%b %Y"), font=axis, fill=MUTED, anchor="ra"
     )
 
+    image = image.resize((WIDTH, HEIGHT), Image.Resampling.LANCZOS)
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, "PNG", optimize=True)
     return output
