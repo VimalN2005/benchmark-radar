@@ -942,7 +942,8 @@
                titled block with two subheadings and eight cards, which outranked
                the search box it was meant to support; they are now one line of
                chips for a reader who has nothing in mind to type. -->
-          <aside class="benchmark-navigator" aria-labelledby="benchmark-search-heading">
+          <details class="benchmark-navigator" id="benchmark-browser" open>
+            <summary class="benchmark-browser-toggle" data-i18n="Change benchmark">Change benchmark</summary>
             <div class="benchmark-search">
               <h2 class="benchmark-search-label" id="benchmark-search-heading">
                 <label for="benchmark-search-input"
@@ -968,7 +969,7 @@
               </div>
               <div id="benchmark-shortlist" class="benchmark-shortlist" hidden></div>
             </div>
-          </aside>
+          </details>
 
           <section class="frontier-panel" id="adoption-frontier" aria-labelledby="frontier-heading">
             <div class="frontier-heading-row">

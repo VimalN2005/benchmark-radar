@@ -3,7 +3,7 @@
    applies to the dashboard: every rule is scoped to .blog-page, which only the
    generated blog documents carry. */
 .blog-page .blog-view {
-  padding: clamp(1.25rem, 2vw, 1.75rem) 0 6rem;
+  padding: var(--space-4) 0 3rem;
 }
 
 .blog-page .blog-hero {

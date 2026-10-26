@@ -244,7 +244,7 @@ def test_the_navigator_is_a_tool_region_not_a_content_section():
     # support, and the paragraph restated the heading. The panel is now a field,
     # its reach line, its results, and a quiet ranked list.
     html = source("site/index.html")
-    navigator = html.split('class="benchmark-navigator"', 1)[1].split("</aside>", 1)[0]
+    navigator = html.split('class="benchmark-navigator"', 1)[1].split("</details>", 1)[0]
 
     for gone in (
         'data-i18n="Famous benchmarks"',
