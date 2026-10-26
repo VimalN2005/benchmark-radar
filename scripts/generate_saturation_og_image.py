@@ -81,7 +81,7 @@ def render(progression: dict, index: dict, output: Path) -> Path:
     first = min(date.fromisoformat(record["first_reported_at"]) for record in records)
     last = max(date.fromisoformat(record["last_reported_at"]) for record in records)
     span = max((last - first).days, 1)
-    left, right, top, bottom = MARGIN + 48, WIDTH - MARGIN - 10, y + 52, y + 282
+    left, right, top, bottom = MARGIN + 48, WIDTH - MARGIN - 10, y + 52, y + 260
     plot_width, plot_height = right - left, bottom - top
 
     for value in (0, 25, 50, 75, 100):
