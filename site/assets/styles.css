@@ -129,7 +129,7 @@ footer {
   align-items: center;
   justify-content: space-between;
   gap: 1.25rem;
-  min-height: 80px;
+  min-height: 64px;
   background: color-mix(in srgb, var(--canvas) 96%, transparent);
   backdrop-filter: blur(12px);
 }
@@ -607,7 +607,7 @@ main {
 }
 
 .view {
-  padding: clamp(2.25rem, 4vw, 3.75rem) 0 6rem;
+  padding: var(--space-4) 0 3rem;
 }
 
 /* Primary page titles stay close to the shared masthead so switching sections
@@ -617,7 +617,7 @@ main {
 #leaderboard-view,
 #saturation-view,
 #trends-view {
-  padding-top: clamp(1.25rem, 2vw, 1.75rem);
+  padding-top: var(--space-4);
 }
 
 /* Each view is its own page (/, /leaderboard/, /trends/, /explore/) and
@@ -638,7 +638,7 @@ main {
   gap: 2rem;
   align-items: end;
   justify-content: space-between;
-  margin-bottom: clamp(1.5rem, 2.5vw, 2.25rem);
+  margin-bottom: var(--space-4);
 }
 
 .eyebrow {
@@ -2914,7 +2914,7 @@ td a {
   grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
-  margin: 1.75rem 0 2.5rem;
+  margin: 1rem 0 1.5rem;
 }
 
 /* A slate search rail connects the light page to the dark score chart. The
@@ -2928,6 +2928,10 @@ td a {
   border: 1px solid var(--edge);
   background: #e0e7eb;
   box-shadow: var(--shadow);
+}
+
+.benchmark-browser-toggle {
+  display: none;
 }
 
 /* Muted greys chosen against a near-white surface do not carry on the darker
@@ -4820,7 +4824,24 @@ footer {
 
   .benchmark-navigator {
     position: static;
+    max-height: none;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .benchmark-browser-toggle {
+    display: list-item;
+    min-height: var(--control-height);
+    align-content: center;
+    cursor: pointer;
+  }
+
+  .benchmark-navigator[open] > summary {
+    margin-bottom: var(--space-3);
+  }
+
+  .benchmark-navigator .benchmark-search {
     max-height: min(50vh, 24rem);
+    overflow-y: auto;
   }
 
   .health-panel {
@@ -6231,10 +6252,11 @@ dialog {
 /* Responsive navigation and Today controls share the canonical site chrome. */
 /* Keep every destination visible when the wordmark and utilities compete for space. */
 .view-nav {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 4px;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .view-nav button,
@@ -6350,8 +6372,8 @@ dialog {
   .masthead {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--space-2) var(--space-3);
-    padding-block: var(--space-3);
+    gap: 4px var(--space-3);
+    padding-block: var(--space-2);
   }
 
   .masthead-main {
@@ -6430,18 +6452,8 @@ dialog {
 }
 
 @media (max-width: 360px) {
-  .brand {
-    grid-column: 1 / -1;
-  }
-
-  .masthead-end {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-content: start;
-  }
-
-  .view-nav {
-    grid-row: 3;
+  .brand strong {
+    display: none;
   }
 }
 

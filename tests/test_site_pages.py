@@ -95,6 +95,25 @@ def test_writes_one_page_per_shard_plus_directory(tmp_path):
     assert (output / "index.html").exists()
 
 
+def test_benchmark_pages_share_the_dashboard_shell_without_duplicate_navigation(tmp_path):
+    from benchmark_radar.blog_shell import extract_site_chrome
+
+    dashboard = Path("site/index.html").read_text(encoding="utf-8")
+    chrome = extract_site_chrome(dashboard, active_path="/saturation/")
+    output = _generated_pages(tmp_path, _shard("alpha-bench", "Alpha Bench"))
+    page = _page_text(output, "alpha-bench")
+    directory = (output / "index.html").read_text(encoding="utf-8")
+    for text in (page, directory):
+        assert chrome.header in text
+        assert chrome.footer in text
+        assert text.count("<footer>") == 1
+        assert '<nav class="site">' not in text
+        assert 'id="main-content"' in text
+        assert 'src="/assets/blog.js"' in text
+    assert page.count('class="record-history-link"') == 1
+    assert f'href="{SITE_URL}/saturation/?lfrontier=alpha-bench"' in page
+
+
 def test_pages_build_when_invoked_outside_repository(tmp_path, monkeypatch):
     # Callers selecting a custom shard/output directory cannot rely on the shell's cwd.
     shard_dir = _write_shards(tmp_path, _shard("alpha-bench", "Alpha Bench"))

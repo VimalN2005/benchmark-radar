@@ -554,6 +554,7 @@ const I18N = {
     "Count or score scale unverified": "数量或分数刻度未核实",
     "{visible} of {n} benchmarks shown · {s} sources in total": "显示 {visible} / {n} 个 benchmark · 全部数据来自 {s} 个来源",
     "Browse all benchmarks": "查找全部 benchmark",
+    "Change benchmark": "切换 benchmark",
     "Benchmark Frontier": "Benchmark 前沿",
     "Benchmark Frontier chart": "Benchmark 前沿图",
     "Which difficult benchmarks have been tested most": "哪些难题，已有更多模型参加测试",
@@ -2138,6 +2139,8 @@ function applyCurrentSeo() {
 // a false current item.
 function syncNavState() {
   const utility = activeUtility();
+  const award = document.querySelector(".hf-upvote-banner");
+  if (award) award.hidden = state.view !== "today" || Boolean(utility);
   document.querySelectorAll("[data-view]").forEach((item) => {
     const active = !utility && item.dataset.view === state.view;
     item.classList.toggle("nav-active", active);
@@ -2186,6 +2189,14 @@ function setView(view, update = true, mode = "push") {
 function selectFrontier(benchmarkId) {
   state.lfrontier = benchmarkId;
   state.lfrontierExplicit = true;
+  if (window.matchMedia?.("(max-width: 1050px)")?.matches) {
+    const browser = byId("benchmark-browser");
+    if (browser) {
+      const restoreFocus = browser.contains(document.activeElement);
+      browser.open = false;
+      if (restoreFocus) browser.querySelector("summary").focus({ preventScroll: true });
+    }
+  }
 }
 
 function openSaturation(benchmarkId) {
@@ -7884,8 +7895,8 @@ function catalogScoreChart(source, payload) {
   const pad = Math.max((high - low) * 0.18, Math.abs(high) * 0.05, Number.EPSILON);
   const band = { low: low - pad, high: high + pad };
 
-  // Same viewBox and margins as scoreTrackChart, so the two charts sit at the
-  // same visual scale wherever a reader compares them.
+  // Keep the same point spacing as scoreTrackChart. Crop only the unused
+  // band above the highest observation; do not change the score scale.
   const narrow = typeof window !== "undefined" && window.innerWidth <= 760;
   const width = narrow ? 520 : 920;
   const scoreHeight = 480;
@@ -7907,8 +7918,9 @@ function catalogScoreChart(source, payload) {
     return scoreTop + scoreHeight - ((value - band.low) / (band.high - band.low)) * scoreHeight;
   };
 
+  const topInset = Math.max(0, scoreY(high) - margin.top);
   const svg = svgElement("svg", {
-    viewBox: `0 0 ${width} ${height}`,
+    viewBox: `0 ${topInset} ${width} ${height - topInset}`,
     role: "group",
     "aria-label": t(
       plotted.every((row) => row.date_precision === "model_announcement")
@@ -11590,6 +11602,12 @@ const scheduleLeaderboardRender = debounce(() => {
 });
 
 function bindEvents() {
+  const compactBrowser = window.matchMedia?.("(max-width: 1050px)");
+  if (compactBrowser) {
+    const syncBrowser = () => { byId("benchmark-browser").open = !compactBrowser.matches; };
+    syncBrowser();
+    compactBrowser.addEventListener("change", syncBrowser);
+  }
   // Without this a pushed entry would change the URL on Back and leave the
   // page showing the previous view, silently disagreeing with its own address
   // bar (issue #286).
