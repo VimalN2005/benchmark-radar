@@ -110,6 +110,7 @@ def test_benchmark_pages_share_the_dashboard_shell_without_duplicate_navigation(
         assert '<nav class="site">' not in text
         assert 'id="main-content"' in text
         assert 'src="/assets/blog.js"' in text
+        assert text.count('src="/assets/clarity.js"') == 1
     assert page.count('class="record-history-link"') == 1
     assert f'href="{SITE_URL}/saturation/?lfrontier=alpha-bench"' in page
 
@@ -346,7 +347,7 @@ def test_values_are_escaped_and_cannot_inject_markup(tmp_path):
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
     assert "<img src=x onerror" not in page
     assert "payload</script>" not in page
-    assert page.count("</script>") == 4  # two JSON-LD blocks, chrome data and behavior
+    assert page.count("</script>") == 5  # two JSON-LD blocks, chrome data and two scripts
 
 
 def test_no_placeholder_text_for_missing_fields(tmp_path):

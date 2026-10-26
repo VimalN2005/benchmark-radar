@@ -919,7 +919,8 @@ def write_benchmark_pages(
         chrome.header
         + '<script id="chrome-i18n" type="application/json">'
         + json.dumps(translations, ensure_ascii=False).replace("<", "\\u003c")
-        + '</script><script src="/assets/blog.js" defer></script>'
+        + '</script><script src="/assets/clarity.js" defer></script>'
+        + '<script src="/assets/blog.js" defer></script>'
     )
     entries: list[tuple[str, str]] = []
     for slug, shard in loaded:
