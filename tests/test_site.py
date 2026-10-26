@@ -1820,14 +1820,16 @@ def test_share_card_is_declared_with_an_absolute_url():
 def test_share_card_exists_at_the_declared_size():
     from PIL import Image
 
-    card = Path("site/assets/og-card.png")
-    assert card.exists(), "run scripts/generate_og_image.py"
-
-    with Image.open(card) as image:
-        # 1200x630 is the ratio Open Graph consumers crop to. A card generated
-        # at another size loses its bottom line, which is where the "not
-        # benchmark quality" caveat sits.
-        assert image.size == (1200, 630)
+    for card, script in (
+        (Path("site/assets/og-card.png"), "generate_og_image.py"),
+        (Path("site/assets/og-card-saturation.png"), "generate_saturation_og_image.py"),
+    ):
+        assert card.exists(), f"run scripts/{script}"
+        with Image.open(card) as image:
+            # 1200x630 is the ratio Open Graph consumers crop to. A card generated
+            # at another size loses its bottom line, which is where the "not
+            # benchmark quality" caveat sits.
+            assert image.size == (1200, 630)
 
 
 def test_share_card_attributes_its_source_without_overlapping_the_caveat():
