@@ -315,7 +315,6 @@ def test_each_page_carries_its_own_canonical_and_blogposting_schema(tmp_path):
     assert posting["inLanguage"] == ["en", "zh-Hans"]
 
 
-
 def test_each_page_declares_the_full_share_card(tmp_path):
     # Issue #891: a shared blog link asks for the same large card as the homepage.
     write_blog_with_chrome([_briefed(status="insight")], tmp_path)
@@ -323,6 +322,7 @@ def test_each_page_declares_the_full_share_card(tmp_path):
     assert SHARE_CARD_META in page
     for tag in SHARE_CARD_META.splitlines():
         assert tag in DASHBOARD_HTML
+
 
 def _schemas(page: str) -> list[dict]:
     return [

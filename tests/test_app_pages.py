@@ -309,7 +309,6 @@ def test_each_page_declares_the_url_it_is_served_at(tmp_path):
         assert f'<meta property="og:url" content="{SITE_URL}{path}">' in page
 
 
-
 def test_saturation_shares_its_own_card_and_every_other_route_the_site_card(tmp_path):
     report = _write(tmp_path, _dashboard())
     site_card = f"{SITE_URL}/assets/og-card.png"
@@ -325,6 +324,7 @@ def test_saturation_shares_its_own_card_and_every_other_route_the_site_card(tmp_
     assert esc(SATURATION_CARD_ALT) in saturation
     # The Organization schema names the site's own image, not the page's card.
     assert f'"image": "{site_card}"' in saturation
+
 
 def test_only_the_named_view_is_open(tmp_path):
     _write(tmp_path, _dashboard())
