@@ -6250,7 +6250,7 @@ dialog {
 }
 
 /* Responsive navigation and Today controls share the canonical site chrome. */
-/* Keep every destination visible when the wordmark and utilities compete for space. */
+/* Keep navigation in one scrollable row when the header runs out of space. */
 .view-nav {
   flex-wrap: nowrap;
   align-items: center;
@@ -6270,6 +6270,10 @@ dialog {
   padding: 0 var(--space-3);
   white-space: nowrap;
   letter-spacing: normal;
+}
+
+.view-nav :is(button, a):focus-visible {
+  outline-offset: -3px;
 }
 
 .brand-mark {

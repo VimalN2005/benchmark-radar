@@ -2168,6 +2168,8 @@ function syncNavState() {
   citeOpen?.setAttribute("aria-expanded", String(utility === "cite"));
   if (utility === "cite") citeOpen?.setAttribute("aria-current", "page");
   else citeOpen?.removeAttribute("aria-current");
+  const activeNav = document.querySelector('.view-nav [aria-current="page"]');
+  activeNav?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
 }
 
 // `update` false is for restoring a view that is already in the URL (boot and
@@ -11604,7 +11606,10 @@ const scheduleLeaderboardRender = debounce(() => {
 function bindEvents() {
   const compactBrowser = window.matchMedia?.("(max-width: 1050px)");
   if (compactBrowser) {
-    const syncBrowser = () => { byId("benchmark-browser").open = !compactBrowser.matches; };
+    const syncBrowser = () => {
+      const browser = byId("benchmark-browser");
+      if (browser) browser.open = !compactBrowser.matches;
+    };
     syncBrowser();
     compactBrowser.addEventListener("change", syncBrowser);
   }
