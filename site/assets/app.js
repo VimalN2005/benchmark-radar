@@ -2503,15 +2503,28 @@ function recordFacts(item, { quietUnreported = false } = {}) {
 }
 
 
-// A card past 100 or 1,000 GitHub stars, or past 1,000 dataset downloads, is
-// tinted gold (issue #994). The tint reports a count the source published; it
-// is not a quality judgement.
+// A card is tinted gold by a count its source published (issue #994): the
+// light tint at the first threshold, the strong tint at the second. Downloads
+// need ten times the count, since any script that pulls a dataset adds one
+// (rubric.py saturates downloads at 10x stars for the same reason). The tint
+// reports a count; it is not a quality judgement.
+const CARD_TIER_THRESHOLDS = {
+  stars: [100, 1000],
+  likes: [100, 1000],
+  upvotes: [100, 1000],
+  votes: [100, 1000],
+  citations: [100, 1000],
+  downloads: [1000, 10000],
+};
+
 function cardTierClass(item) {
-  const stars = Number(item.metrics?.stars);
-  const downloads = Number(item.metrics?.downloads);
-  if (stars > 1000 || downloads > 1000) return " stars-1000";
-  if (stars > 100) return " stars-100";
-  return "";
+  let tier = 0;
+  for (const [key, [light, strong]] of Object.entries(CARD_TIER_THRESHOLDS)) {
+    const value = Number(item.metrics?.[key]);
+    if (value > strong) return " stars-1000";
+    if (value > light) tier = 1;
+  }
+  return tier ? " stars-100" : "";
 }
 
 function safeHttpUrl(value) {
