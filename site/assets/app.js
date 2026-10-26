@@ -2502,6 +2502,18 @@ function recordFacts(item, { quietUnreported = false } = {}) {
   );
 }
 
+
+// A card past 100 or 1,000 GitHub stars, or past 1,000 dataset downloads, is
+// tinted gold (issue #994). The tint reports a count the source published; it
+// is not a quality judgement.
+function cardTierClass(item) {
+  const stars = Number(item.metrics?.stars);
+  const downloads = Number(item.metrics?.downloads);
+  if (stars > 1000 || downloads > 1000) return " stars-1000";
+  if (stars > 100) return " stars-100";
+  return "";
+}
+
 function safeHttpUrl(value) {
   try {
     const url = new URL(String(value));
@@ -11049,11 +11061,7 @@ function evidenceCard(item, day) {
   const { name, subtitle } = splitBenchmarkTitle(fullTitle);
   const categories = (item.categories || []).slice(0, 3).map(titleCase);
   const sourceHref = safeHttpUrl(item.url);
-  // A repository past 100 or 1,000 GitHub stars is tinted gold. The tint
-  // reports a count the source published; it is not a quality judgement.
-  const stars = Number(item.metrics?.stars);
-  const tier = stars > 1000 ? " stars-1000" : stars > 100 ? " stars-100" : "";
-  return element("article", { className: `record-card radar-card${tier}` }, [
+  return element("article", { className: `record-card radar-card${cardTierClass(item)}` }, [
     element("div", { className: "radar-rail" }, [
       sourceChip(item, sourceHref),
       railEvent(item).verb

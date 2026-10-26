@@ -1223,6 +1223,17 @@ def test_evidence_cards_show_fetched_source_metadata_without_inventing_zeroes():
         "ariaLabel": "Source metadata",
     }
     assert ".record-facts" in styles
+    # Issue #994: downloads above 1,000 earn the same gold tint as stars above
+    # 1,000; the lighter tint stays a stars-only tier.
+    assert facts["tiers"] == {
+        "downloads_282271": " stars-1000",
+        "downloads_1000": "",
+        "downloads_500": "",
+        "stars_1001": " stars-1000",
+        "stars_101": " stars-100",
+        "stars_50_downloads_5000": " stars-1000",
+        "none": "",
+    }
 
 
 def test_main_filters_use_persisted_attention_and_snapshot_dates():

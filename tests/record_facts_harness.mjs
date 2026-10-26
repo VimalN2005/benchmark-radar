@@ -18,7 +18,8 @@ globalThis.element = (tag, props = {}, children = []) => ({ tag, props, children
 const harness = `${source.slice(start, end)}
 globalThis.__recordFactEntries = recordFactEntries;
 globalThis.__recordDateEntries = recordDateEntries;
-globalThis.__recordFacts = recordFacts;`;
+globalThis.__recordFacts = recordFacts;
+globalThis.__cardTierClass = cardTierClass;`;
 new Function(harness)();
 
 const reportedItem = {
@@ -43,6 +44,19 @@ const dates = globalThis.__recordDateEntries({
   updated_at: "2026-08-25T17:59:04Z",
 });
 const rendered = globalThis.__recordFacts(reportedItem);
+// Issue #994: a Hugging Face dataset past 1,000 downloads is tinted gold
+// like a repository past 1,000 stars.
+const tiers = Object.fromEntries(
+  [
+    ["downloads_282271", { downloads: 282271 }],
+    ["downloads_1000", { downloads: 1000 }],
+    ["downloads_500", { downloads: 500 }],
+    ["stars_1001", { stars: 1001 }],
+    ["stars_101", { stars: 101 }],
+    ["stars_50_downloads_5000", { stars: 50, downloads: 5000 }],
+    ["none", {}],
+  ].map(([key, metrics]) => [key, globalThis.__cardTierClass({ metrics })]),
+);
 
 console.log(
   JSON.stringify({
@@ -50,6 +64,7 @@ console.log(
     slug_owner: slugOwner,
     unreported,
     dates,
+    tiers,
     rendered: {
       tag: rendered.tag,
       className: rendered.props.className,
