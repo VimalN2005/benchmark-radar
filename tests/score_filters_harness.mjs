@@ -63,6 +63,18 @@ state.todaySort = 'attention';
 assert.deepEqual(dates.filteredObservations().map(r=>r.source_id), ['new','zero','unknown']);
 assert.equal(dates.observationAttention({metrics:{stars:'20', likes:null, downloads:NaN}}), -1);
 
+// Issue #1001: a GitHub Release carries its repository's stars, which do not
+// rank the release. It stays in the window and ranks by its own downloads.
+observations = [
+  {...observation('2026-09-06', 'openclaw/openclaw@v2026.8.34'), source:'GitHub Release', parser_version:'github-releases/3', metrics:{stars:391191, forks:82244, downloads:70}},
+  {...observation('2026-09-06', 'robodojo'), source:'Hugging Face', metrics:{likes:3, downloads:282284}},
+  {...observation('2026-09-06', 'repo'), metrics:{stars:500}},
+  {...observation('2026-09-06', 'tag-no-downloads'), source:'GitHub Release', parser_version:'github-releases/4', metrics:{stars:9000}},
+];
+assert.equal(dates.observationAttention(observations[0]), 70);
+assert.equal(dates.observationAttention(observations[3]), -1);
+assert.deepEqual(dates.filteredObservations().map(r=>r.source_id), ['robodojo','repo','openclaw/openclaw@v2026.8.34','tag-no-downloads']);
+
 state.todaySort = 'newest';
 observations = [
   {...observation('2026-09-06', 'offset'), published_at:'2026-09-06T12:00:00+08:00'},
