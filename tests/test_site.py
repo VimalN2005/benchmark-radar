@@ -3201,6 +3201,29 @@ def test_issue_333_the_page_never_scrolls_sideways():
     assert "overflow-x: hidden" not in styles
 
 
+def test_issue_1002_trends_table_uses_a_local_accessible_scroll_region():
+    """The wide Trends table must not create page-level overflow on narrow screens."""
+    html = Path("site/index.html").read_text(encoding="utf-8")
+    styles = Path("site/assets/styles.css").read_text(encoding="utf-8")
+    script = Path("site/assets/app.js").read_text(encoding="utf-8")
+
+    assert (
+        '<div\n              class="table-wrap direction-trends-table"' in html
+        and 'tabindex="0"' in html
+        and 'role="region"' in html
+        and 'aria-label="Trends table"' in html
+        and 'data-i18n-aria="Trends table"' in html
+    )
+    trends_rule = _css_rule(styles, ".direction-trends-table {")
+    assert "max-width: 100%;" in trends_rule
+    assert "min-width: 0;" in trends_rule
+    assert "overflow-x: auto;" in trends_rule
+    assert "overscroll-behavior-inline: contain;" in trends_rule
+    assert "scrollbar-width: thin;" in trends_rule
+    assert '"Trends table": "趋势表格"' in script
+    assert "body {\n  overflow-x: clip;" in styles
+
+
 def test_issue_333_the_page_is_two_typefaces_not_three():
     """Headings, body copy and labels were set in three unrelated faces at once."""
     styles = Path("site/assets/styles.css").read_text(encoding="utf-8")

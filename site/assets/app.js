@@ -620,6 +620,7 @@ const I18N = {
     Today: "今日",
     Leaderboard: "排行榜",
     Trends: "趋势",
+    "Trends table": "趋势表格",
     Trend: "趋势",
     Explore: "探索",
     Blog: "博客",

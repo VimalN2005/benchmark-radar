@@ -2158,6 +2158,19 @@ a.answer-source-count,
   overflow-x: auto;
 }
 
+.direction-trends-table {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+}
+
+.direction-trends-table:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
 table {
   width: 100%;
   min-width: 1100px;
