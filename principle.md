@@ -177,6 +177,19 @@ full population and account for the visible records, pre-2024 records, records
 excluded for missing scores, and records hidden by score. Count each
 record once so the categories reconcile.
 
+## A filtered benchmark is worse than a flagged non-benchmark
+
+**We cannot tolerate a benchmark being filtered out. A non-benchmark being
+flagged is tolerable.** A benchmark that an admission, taxonomy, or suppression
+rule removes never reaches any surface, and nobody can see that it is missing.
+A non-benchmark that gets in stays visible, so a reader can report it, as with
+the OpenClaw release in #1001.
+
+Before adding or tightening such a rule, run it against every record in the
+committed snapshots and list each record it would remove. If one of them is a
+benchmark, a benchmark paper, or an evaluation tool, reject the rule or narrow
+it. Say which inputs the test could not cover. #1011 is an example.
+
 ## Calculate only what the evidence supports
 
 Represent every record, but compute a statistic only from records with the
