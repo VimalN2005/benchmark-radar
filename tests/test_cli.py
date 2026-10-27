@@ -578,6 +578,11 @@ def test_pages_deploy_waits_for_the_benchmark_cards_it_links():
         if step.get("name") == "Publish the cards"
     )
     assert "curl -fsS" in publish["run"]
+    # The renderer imports Pillow, which only the dev extra installs.
+    install = next(
+        step for step in jobs["publish-benchmark-cards"]["steps"] if step.get("name") == "Install"
+    )
+    assert "'.[dev]'" in install["run"]
 
 
 def test_daily_radar_persists_only_a_fresh_target_day_snapshot():
