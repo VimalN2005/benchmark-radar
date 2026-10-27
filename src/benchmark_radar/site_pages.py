@@ -34,7 +34,7 @@ from urllib.parse import urlsplit
 from .cards import benchmark_card_url
 from .feed import SITE_URL
 from .site_links import resource_link
-from .site_shell import SOURCE_LABELS, website_reference
+from .site_shell import SHARE_CARD_META, SOURCE_LABELS, share_card_meta, website_reference
 
 DEFAULT_SHARD_DIR = Path("site/data/benchmarks")
 DEFAULT_PAGES_DIR = Path("site/benchmarks")
@@ -85,24 +85,6 @@ _CONTAINER_MONOREPOS = frozenset(
     }
 )
 _DOCUMENT_LIMIT = 12
-
-
-# The same share-card block as site/index.html (issue #891). These pages are
-# the deep links an assistant cites, so they declare the card's size (without
-# it some consumers fall back to a small thumbnail or no image on first fetch)
-# and mirror it as twitter:image for consumers that skip the og: namespace.
-# A benchmark page shows its own card (issue #671); the directory shows the
-# site's.
-def _share_card_meta(image: str) -> str:
-    return f"""\
-<meta property="og:image" content="{image}">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="{image}">"""
-
-
-_SHARE_CARD_META = _share_card_meta(f"{SITE_URL}/assets/og-card.png")
 
 _DIR_DESCRIPTION = (
     "Every benchmark in the Benchmark Radar catalog, each with its own page "
@@ -716,7 +698,7 @@ def _page_html(
 <meta property="og:title" content="{_esc(title)}">
 <meta property="og:description" content="{_esc(description)}">
 <meta property="og:url" content="{canonical}">
-{_share_card_meta(benchmark_card_url(slug))}
+{share_card_meta(benchmark_card_url(slug))}
 <link rel="alternate" type="application/json" href="{SITE_URL}/data/benchmarks/{slug}.json">
 <script type="application/ld+json">{jsonld}</script>
 <script type="application/ld+json">{_breadcrumb_jsonld(slug, name)}</script>
@@ -781,7 +763,7 @@ def _directory_html(entries: list[tuple[str, str]], header: str = "", footer: st
 <meta property="og:title" content="Benchmark directory · Benchmark Radar">
 <meta property="og:description" content="{_esc(_DIR_DESCRIPTION)}">
 <meta property="og:url" content="{canonical}">
-{_SHARE_CARD_META}
+{SHARE_CARD_META}
 <link rel="alternate" type="application/json" href="{SITE_URL}/data/benchmark-index.json">
 <script type="application/ld+json">{_json_ld(payload)}</script>
 <script type="application/ld+json">{_json_ld(breadcrumb)}</script>

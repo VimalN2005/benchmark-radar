@@ -42,9 +42,11 @@
     <!-- /br:head-seo -->
 
     <!-- Without these, every share of this dashboard renders as a grey
-         placeholder with a URL under it. The card is generated from the same
-         score-frontier data as the saturation view (scripts/generate_og_image.py),
-         so a share shows reported scores over time rather than a leaderboard. -->
+         placeholder with a URL under it. The card shows what the site does,
+         a search box over catalog records, and reads its counts from the
+         built catalog at deploy time (scripts/generate_og_image.py). The
+         /saturation/ page swaps in its own score-plateau card
+         (app_pages.SATURATION_CARD). -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Benchmark Radar">
     <meta property="og:locale" content="en_US">
@@ -54,7 +56,7 @@
     <meta property="og:image:height" content="630">
     <meta
       property="og:image:alt"
-      content="Benchmark Radar: see where reported AI benchmark scores start to plateau, with cited score frontiers across GPQA Diamond, HLE, Terminal-Bench, and SWE-bench Verified."
+      content="Benchmark Radar: find any AI benchmark. A search box over catalog records such as SWE-bench Verified, Humanity's Last Exam and MMLU-Pro, each with its paper, code, dataset and reported scores."
     >
     <meta name="twitter:card" content="summary_large_image">
     <!-- Mirrors og:image for consumers that read the Twitter namespace only

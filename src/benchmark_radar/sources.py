@@ -971,9 +971,13 @@ def fetch_zenodo_records(
             source_id = str(row.get("recid") or row.get("id") or "").strip()
             title = str(metadata.get("title") or row.get("title") or "").strip()
             url = str(links.get("self_html") or links.get("doi") or "").strip()
-            published = _optional_date(
-                str(metadata.get("publication_date") or row.get("created") or "")
-            )
+            # The depositor sets publication_date to any date, including a future
+            # one or a bare year (#907). The deposition's own creation time
+            # stands in when that value is unreadable or ahead of the clock, so
+            # the record is kept; raw retains the depositor's value.
+            published = _optional_date(str(metadata.get("publication_date") or ""))
+            if published is None or published > _latest_allowed(config):
+                published = _optional_date(str(row.get("created") or ""))
             updated = _optional_date(str(row.get("updated") or row.get("modified") or ""))
             activity = updated or published
             if not source_id or not title or not url or published is None or activity is None:

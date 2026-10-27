@@ -77,6 +77,20 @@ UTILITY_LABELS = {
     "rubric": "Scoring rubric",
 }
 
+# /saturation/ shares the score-plateau card instead of the search card the
+# other pages share, because that chart is what the page shows
+# (scripts/generate_saturation_og_image.py writes it at deploy time).
+SATURATION_CARD = f"{SITE_URL}/assets/og-card-saturation.png"
+SATURATION_CARD_ALT = (
+    "Benchmark Radar: where benchmark scores start to plateau, with cited score "
+    "frontiers across GPQA Diamond, Humanity's Last Exam, Terminal-Bench and "
+    "SWE-bench Verified."
+)
+_CARD_IMAGE = re.compile(
+    r'(<meta (?:property="og:image"|name="twitter:image") content=")([^"]*)(">)'
+)
+_CARD_ALT = re.compile(r'(property="og:image:alt"\s+content=")([^"]*)(")')
+
 _SEO_BLOCK = r"const\s+{name}\s*=\s*\{{(.*?)^\s*\}};"
 _SEO_ENTRY = re.compile(
     r"^(?P<indent>[ \t]+)(?P<page>[\w-]+):\s*\{\s*"
@@ -178,6 +192,18 @@ def _head_seo(seo: dict[str, str]) -> str:
     <meta name="twitter:description" content="{description}">
     <link rel="canonical" href="{canonical}">
 """
+
+
+def _saturation_card(document: str) -> str:
+    """Point the og:image, twitter:image and alt text at the saturation card."""
+    document, images = _CARD_IMAGE.subn(rf"\g<1>{SATURATION_CARD}\g<3>", document)
+    document, alts = _CARD_ALT.subn(rf"\g<1>{esc(SATURATION_CARD_ALT)}\g<3>", document)
+    if images != 2 or alts != 1:
+        raise AppPageError(
+            f"expected og:image, twitter:image and og:image:alt once each, "
+            f"found {images} images and {alts} alt texts"
+        )
+    return document
 
 
 def _page_jsonld(label: str, seo: dict[str, str]) -> str:
@@ -292,6 +318,8 @@ def render_app_page(
         what="page JSON-LD marker",
     )
     document = _open_on(document, view)
+    if view == "saturation":
+        document = _saturation_card(document)
     document = _deactivate_home_navigation(document)
     if view not in UNLISTED_ROUTES:
         document = _activate_navigation(document, view)

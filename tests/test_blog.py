@@ -25,7 +25,7 @@ from benchmark_radar.blog_shell import (
     extract_site_chrome,
 )
 from benchmark_radar.feed import SITE_URL
-from benchmark_radar.site_shell import esc
+from benchmark_radar.site_shell import SHARE_CARD_META, esc
 
 # The blog chrome is extracted from the committed dashboard source, so the
 # tests exercise the real site/index.html rather than a hand-written fixture
@@ -313,6 +313,15 @@ def test_each_page_carries_its_own_canonical_and_blogposting_schema(tmp_path):
     assert posting["datePublished"] == "2026-08-30"
     assert posting["citation"] == ["https://arxiv.org/abs/2608.00001"]
     assert posting["inLanguage"] == ["en", "zh-Hans"]
+
+
+def test_each_page_declares_the_full_share_card(tmp_path):
+    # Issue #891: a shared blog link asks for the same large card as the homepage.
+    write_blog_with_chrome([_briefed(status="insight")], tmp_path)
+    page = (tmp_path / "blog" / "2026-08-30" / "index.html").read_text(encoding="utf-8")
+    assert SHARE_CARD_META in page
+    for tag in SHARE_CARD_META.splitlines():
+        assert tag in DASHBOARD_HTML
 
 
 def _schemas(page: str) -> list[dict]:

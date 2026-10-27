@@ -44,7 +44,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .feed import SITE_URL
-from .site_shell import esc, json_ld
+from .site_shell import SHARE_CARD_META, esc, json_ld
 
 BLOG_PATH = "/blog/"
 BLOG_ARCHIVE_PATH = "/blog/archive/"
@@ -324,11 +324,9 @@ def render_page(
 <meta property="og:title" content="{esc(title)}">
 <meta property="og:description" content="{esc(description)}">
 <meta property="og:url" content="{esc(canonical)}">
-<meta property="og:image" content="{SITE_URL}/assets/og-card.png">
-<meta name="twitter:card" content="summary_large_image">
+{SHARE_CARD_META}
 <meta name="twitter:title" content="{esc(title)}">
 <meta name="twitter:description" content="{esc(description)}">
-<meta name="twitter:image" content="{SITE_URL}/assets/og-card.png">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="alternate" type="application/rss+xml" title="Benchmark Radar daily brief"
       href="{BLOG_FEED_PATH}">
