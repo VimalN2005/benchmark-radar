@@ -202,6 +202,30 @@ def test_page_has_unique_title_and_canonical(tmp_path):
     )
 
 
+def test_benchmark_and_directory_pages_declare_the_same_share_card_as_the_homepage(tmp_path):
+    # Issue #891: a deep link shared on X should get the same large card as the
+    # homepage, so every head carries the image, its size and twitter:image.
+    # A benchmark page carries its own card (issue #671) in the same block.
+    output = _generated_pages(tmp_path, _shard("alpha-bench", "Alpha Bench"))
+    homepage = Path("site/index.html").read_text(encoding="utf-8")
+
+    def expected(card):
+        return [
+            f'<meta property="og:image" content="{card}">',
+            '<meta property="og:image:width" content="1200">',
+            '<meta property="og:image:height" content="630">',
+            '<meta name="twitter:card" content="summary_large_image">',
+            f'<meta name="twitter:image" content="{card}">',
+        ]
+
+    site_card = f"{SITE_URL}/assets/og-card.png"
+    for tag in expected(site_card):
+        assert tag in homepage
+        assert tag in (output / "index.html").read_text("utf-8")
+    for tag in expected(benchmark_card_url("alpha-bench")):
+        assert tag in _page_text(output, "alpha-bench")
+
+
 def test_interactive_view_link_lands_on_saturation_with_the_slug(tmp_path):
     output = _generated_pages(tmp_path, _shard("alpha-bench", "Alpha Bench"))
     page = _page_text(output, "alpha-bench")
