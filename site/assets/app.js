@@ -554,6 +554,7 @@ const I18N = {
     "Count or score scale unverified": "数量或分数刻度未核实",
     "{visible} of {n} benchmarks shown · {s} sources in total": "显示 {visible} / {n} 个 benchmark · 全部数据来自 {s} 个来源",
     "Browse all benchmarks": "查找全部 benchmark",
+    "Change benchmark": "切换 benchmark",
     "Benchmark Frontier": "Benchmark 前沿",
     "Benchmark Frontier chart": "Benchmark 前沿图",
     "Which difficult benchmarks have been tested most": "哪些难题，已有更多模型参加测试",
@@ -2138,6 +2139,8 @@ function applyCurrentSeo() {
 // a false current item.
 function syncNavState() {
   const utility = activeUtility();
+  const award = document.querySelector(".hf-upvote-banner");
+  if (award) award.hidden = state.view !== "today" || Boolean(utility);
   document.querySelectorAll("[data-view]").forEach((item) => {
     const active = !utility && item.dataset.view === state.view;
     item.classList.toggle("nav-active", active);
@@ -2165,6 +2168,8 @@ function syncNavState() {
   citeOpen?.setAttribute("aria-expanded", String(utility === "cite"));
   if (utility === "cite") citeOpen?.setAttribute("aria-current", "page");
   else citeOpen?.removeAttribute("aria-current");
+  const activeNav = document.querySelector('.view-nav [aria-current="page"]');
+  activeNav?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
 }
 
 // `update` false is for restoring a view that is already in the URL (boot and
@@ -2186,6 +2191,14 @@ function setView(view, update = true, mode = "push") {
 function selectFrontier(benchmarkId) {
   state.lfrontier = benchmarkId;
   state.lfrontierExplicit = true;
+  if (window.matchMedia?.("(max-width: 1050px)")?.matches) {
+    const browser = byId("benchmark-browser");
+    if (browser) {
+      const restoreFocus = browser.contains(document.activeElement);
+      browser.open = false;
+      if (restoreFocus) browser.querySelector("summary").focus({ preventScroll: true });
+    }
+  }
 }
 
 function openSaturation(benchmarkId) {
@@ -2500,6 +2513,31 @@ function recordFacts(item, { quietUnreported = false } = {}) {
       ]),
     ),
   );
+}
+
+
+// A card is tinted gold by a count its source published (issue #994): the
+// light tint at the first threshold, the strong tint at the second. Downloads
+// need ten times the count, since any script that pulls a dataset adds one
+// (rubric.py saturates downloads at 10x stars for the same reason). The tint
+// reports a count; it is not a quality judgement.
+const CARD_TIER_THRESHOLDS = {
+  stars: [100, 1000],
+  likes: [100, 1000],
+  upvotes: [100, 1000],
+  votes: [100, 1000],
+  citations: [100, 1000],
+  downloads: [1000, 10000],
+};
+
+function cardTierClass(item) {
+  let tier = 0;
+  for (const [key, [light, strong]] of Object.entries(CARD_TIER_THRESHOLDS)) {
+    const value = Number(item.metrics?.[key]);
+    if (value > strong) return " stars-1000";
+    if (value > light) tier = 1;
+  }
+  return tier ? " stars-100" : "";
 }
 
 function safeHttpUrl(value) {
@@ -4186,8 +4224,19 @@ function closeFiltersDrawer() {
 }
 
 // Missing activity stays inspectable, after records with measured signals.
+//
+// A GitHub Release record carries its repository's star count, copied onto
+// every version tag (sources.py fetches it from the repository endpoint). Those
+// stars measure the repository, not the release, so they do not rank the
+// release: summing them put an OpenClaw version tag with 391,191 repository
+// stars and 70 downloads above every benchmark in Past 30 days (issue #1001).
+// The release still ranks by its own downloads, and the card still shows the
+// repository's stars.
 function observationAttention(item) {
-  const values = ["stars", "likes", "downloads", "points"]
+  const repositoryStars =
+    item.source === "GitHub Release" || String(item.parser_version || "").startsWith("github-releases/");
+  const keys = repositoryStars ? ["likes", "downloads", "points"] : ["stars", "likes", "downloads", "points"];
+  const values = keys
     .map((key) => item.metrics?.[key])
     .filter((value) => typeof value === "number" && Number.isFinite(value) && value >= 0);
   return values.length ? values.reduce((sum, value) => sum + value, 0) : -1;
@@ -7884,8 +7933,8 @@ function catalogScoreChart(source, payload) {
   const pad = Math.max((high - low) * 0.18, Math.abs(high) * 0.05, Number.EPSILON);
   const band = { low: low - pad, high: high + pad };
 
-  // Same viewBox and margins as scoreTrackChart, so the two charts sit at the
-  // same visual scale wherever a reader compares them.
+  // Keep the same point spacing as scoreTrackChart. Crop only the unused
+  // band above the highest observation; do not change the score scale.
   const narrow = typeof window !== "undefined" && window.innerWidth <= 760;
   const width = narrow ? 520 : 920;
   const scoreHeight = 480;
@@ -7907,8 +7956,9 @@ function catalogScoreChart(source, payload) {
     return scoreTop + scoreHeight - ((value - band.low) / (band.high - band.low)) * scoreHeight;
   };
 
+  const topInset = Math.max(0, scoreY(high) - margin.top);
   const svg = svgElement("svg", {
-    viewBox: `0 0 ${width} ${height}`,
+    viewBox: `0 ${topInset} ${width} ${height - topInset}`,
     role: "group",
     "aria-label": t(
       plotted.every((row) => row.date_precision === "model_announcement")
@@ -11049,11 +11099,7 @@ function evidenceCard(item, day) {
   const { name, subtitle } = splitBenchmarkTitle(fullTitle);
   const categories = (item.categories || []).slice(0, 3).map(titleCase);
   const sourceHref = safeHttpUrl(item.url);
-  // A repository past 100 or 1,000 GitHub stars is tinted gold. The tint
-  // reports a count the source published; it is not a quality judgement.
-  const stars = Number(item.metrics?.stars);
-  const tier = stars > 1000 ? " stars-1000" : stars > 100 ? " stars-100" : "";
-  return element("article", { className: `record-card radar-card${tier}` }, [
+  return element("article", { className: `record-card radar-card${cardTierClass(item)}` }, [
     element("div", { className: "radar-rail" }, [
       sourceChip(item, sourceHref),
       railEvent(item).verb
@@ -11590,6 +11636,15 @@ const scheduleLeaderboardRender = debounce(() => {
 });
 
 function bindEvents() {
+  const compactBrowser = window.matchMedia?.("(max-width: 1050px)");
+  if (compactBrowser) {
+    const syncBrowser = () => {
+      const browser = byId("benchmark-browser");
+      if (browser) browser.open = !compactBrowser.matches;
+    };
+    syncBrowser();
+    compactBrowser.addEventListener("change", syncBrowser);
+  }
   // Without this a pushed entry would change the URL on Back and leave the
   // page showing the previous view, silently disagreeing with its own address
   // bar (issue #286).

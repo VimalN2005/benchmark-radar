@@ -105,8 +105,6 @@ _BENCH_CSS = """\
 :root { color-scheme: light; --ink: #15242a; --muted: #5f7078; --line: #bdc9ce; }
 body { margin: 0; font-family: Avenir Next, Avenir, Segoe UI, sans-serif;
   color: var(--ink); line-height: 1.55; }
-nav.site { padding: 1rem max(1rem, calc((100% - 900px) / 2));
-  border-bottom: 1px solid var(--line); display: flex; gap: 1rem; flex-wrap: wrap; }
 main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
 h1 { font-size: 2rem; margin: 0.25rem 0 0.5rem; }
 .lede { color: var(--muted); font-size: 1.05rem; }
@@ -130,12 +128,10 @@ _DIR_CSS = """\
 :root { color-scheme: light; --ink: #15242a; --line: #bdc9ce; }
 body { margin: 0; font-family: Avenir Next, Avenir, Segoe UI, sans-serif;
   color: var(--ink); line-height: 1.55; }
-nav.site { padding: 1rem max(1rem, calc((100% - 900px) / 2));
-  border-bottom: 1px solid var(--line); display: flex; gap: 1rem; flex-wrap: wrap; }
 main { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
-ul { columns: 3; gap: 0.5rem 2rem; padding: 0; list-style: none; }
-li { break-inside: avoid; margin: 0.2rem 0; }
-@media (max-width: 700px) { ul { columns: 1; } }
+main > ul { columns: 3; gap: 0.5rem 2rem; padding: 0; list-style: none; }
+main > ul > li { break-inside: avoid; margin: 0.2rem 0; }
+@media (max-width: 700px) { main > ul { columns: 1; } }
 """
 
 
@@ -647,17 +643,12 @@ def _related_section(slug: str, record: dict[str, Any], context: CatalogContext)
     return f'<section><h2>{_esc(heading)}</h2><ul class="links">{items}</ul></section>'
 
 
-def _benchmark_nav(interactive: str) -> str:
-    return (
-        '<nav class="site">'
-        f'<a href="{SITE_URL}/">Benchmark Radar</a> '
-        f'<a href="{SITE_URL}/benchmarks/">Benchmark directory</a> '
-        f'<a href="{interactive}">Interactive view</a></nav>'
-    )
-
-
 def _page_html(
-    slug: str, shard: dict[str, Any], context: CatalogContext | None = None, header: str = ""
+    slug: str,
+    shard: dict[str, Any],
+    context: CatalogContext | None = None,
+    header: str = "",
+    footer: str = "",
 ) -> str:
     context = context or CatalogContext()
     record = shard.get("record") or {}
@@ -703,7 +694,6 @@ def _page_html(
     )
     jsonld = _webpage_jsonld(slug, name, description, title, record, artifacts)
     interactive = f"{SITE_URL}/saturation/?lfrontier={slug}"
-    nav = _benchmark_nav(interactive)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -727,20 +717,22 @@ def _page_html(
 <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body class="record-page">
+<a class="skip-link" href="#main-content">Skip to content</a>
 {header}
-{nav}
-<main>
-  <p class="eyebrow">Benchmark</p>
-  <h1>{_esc(_benchmark_phrase(name))}</h1>
+<main id="main-content" tabindex="-1">
+  <div class="record-heading">
+    <h1>{_esc(_benchmark_phrase(name))}</h1>
+    <a class="record-history-link" href="{interactive}">Explore score history ↗</a>
+  </div>
   {body}
 </main>
-{nav}
+{footer}
 </body>
 </html>
 """
 
 
-def _directory_html(entries: list[tuple[str, str]], header: str = "") -> str:
+def _directory_html(entries: list[tuple[str, str]], header: str = "", footer: str = "") -> str:
     """Directory page: title, canonical, schema, and the full listing."""
     canonical = f"{SITE_URL}/benchmarks/"
     payload = {
@@ -787,12 +779,9 @@ def _directory_html(entries: list[tuple[str, str]], header: str = "") -> str:
 <link rel="stylesheet" href="/assets/design-system.css">
 </head>
 <body class="record-page">
+<a class="skip-link" href="#main-content">Skip to content</a>
 {header}
-<nav class="site">
-  <a href="{SITE_URL}/">Benchmark Radar</a>
-  <a href="{SITE_URL}/benchmarks/">Benchmark directory</a>
-</nav>
-<main>
+<main id="main-content" tabindex="-1">
   <h1>Benchmark directory</h1>
   <p class="lede">Every benchmark in the catalog, each with its own page covering
     what it tests, who published it, and which scores are on record. The
@@ -800,6 +789,7 @@ def _directory_html(entries: list[tuple[str, str]], header: str = "") -> str:
   <p class="count">{count}</p>
   <ul>{links}</ul>
 </main>
+{footer}
 </body>
 </html>
 """
@@ -938,20 +928,23 @@ def write_benchmark_pages(
         chrome.header
         + '<script id="chrome-i18n" type="application/json">'
         + json.dumps(translations, ensure_ascii=False).replace("<", "\\u003c")
-        + '</script><script src="/assets/blog.js" defer></script>'
+        + '</script><script src="/assets/clarity.js" defer></script>'
+        + '<script src="/assets/blog.js" defer></script>'
     )
     entries: list[tuple[str, str]] = []
     for slug, shard in loaded:
         page_dir = staging / slug
         page_dir.mkdir(parents=True)
         (page_dir / "index.html").write_text(
-            _page_html(slug, shard, context, header), encoding="utf-8"
+            _page_html(slug, shard, context, header, chrome.footer), encoding="utf-8"
         )
         name = _text(shard.get("record") or {}, "name") or slug
         entries.append((name, _canonical(slug)))
 
     entries.sort(key=lambda item: (item[0].lower(), item[1]))
-    (staging / "index.html").write_text(_directory_html(entries, header), encoding="utf-8")
+    (staging / "index.html").write_text(
+        _directory_html(entries, header, chrome.footer), encoding="utf-8"
+    )
 
     if output_dir.exists():
         shutil.rmtree(output_dir)
