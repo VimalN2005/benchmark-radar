@@ -225,7 +225,8 @@ jobs:
 
   # Issue #671: one share card per catalog benchmark, drawn from the index this
   # build validated and pushed to the `cards` branch of
-  # ktwu01/benchmark-radar-cards, where each benchmark's Share button and its
+  # ktwu01/benchmark-radar-cards. GitHub Pages serves that branch at
+  # cards.benchmark-radar.org, where each benchmark's Share button and its
   # page's og:image find it by slug. Images in this repository would grow every
   # clone. The deploy does not wait on this job: a card that is not published
   # yet only makes the Share dialog fall back to the link.
@@ -282,6 +283,10 @@ jobs:
           # deterministic, so only cards whose facts changed make a diff.
           cp cards-out/*.png cards/
           cd cards
+          # GitHub Pages serves this branch at the domain in CNAME; .nojekyll
+          # skips a Jekyll build that would only copy thousands of images.
+          python -c 'from benchmark_radar.cards import CARDS_DOMAIN; print(CARDS_DOMAIN)' > CNAME
+          touch .nojekyll
           git config user.name "benchmark-radar[bot]"
           git config user.email "benchmark-radar[bot]@users.noreply.github.com"
           git add .

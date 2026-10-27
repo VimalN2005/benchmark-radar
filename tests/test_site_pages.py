@@ -238,9 +238,7 @@ def test_interactive_view_link_lands_on_saturation_with_the_slug(tmp_path):
 def test_page_previews_and_shares_its_own_benchmark_card(tmp_path):
     output = _generated_pages(tmp_path, _shard("gpqa", "GPQA <Diamond>"))
     html = _page_text(output, "gpqa")
-    card = (
-        "https://raw.githubusercontent.com/ktwu01/benchmark-radar-cards/refs/heads/cards/gpqa.png"
-    )
+    card = "https://cards.benchmark-radar.org/gpqa.png"
     assert f'<meta property="og:image" content="{card}">' in html
     # Hidden until share-card.js wakes it, so no reader meets a dead control.
     button = re.search(r"<button[^>]*data-share-benchmark=[^>]*>", html).group(0)

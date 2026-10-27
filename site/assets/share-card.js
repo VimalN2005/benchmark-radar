@@ -1,8 +1,9 @@
 // Share any benchmark as an image card (issue #671).
 //
 // Every catalog benchmark has a 1200x630 card named by its slug on the `cards`
-// branch of ktwu01/benchmark-radar-cards; scripts/render_share_images.py
-// draws them and the Pages workflow publishes them before the site deploys.
+// branch of ktwu01/benchmark-radar-cards, which GitHub Pages serves at
+// cards.benchmark-radar.org. scripts/render_share_images.py draws them and the
+// Pages workflow publishes them.
 // This module only fetches the card a reader asked for. A benchmark whose card
 // is missing (a record newer than the last publish) still shares its link.
 //
@@ -10,8 +11,7 @@
 // static /benchmarks/<slug>/ pages load it to wake their hidden Share button,
 // so nothing here runs or renders until a reader asks for it.
 
-export const CARDS_URL =
-  "https://raw.githubusercontent.com/ktwu01/benchmark-radar-cards/refs/heads/cards";
+export const CARDS_URL = "https://cards.benchmark-radar.org";
 
 const SAFE_SLUG = /^[a-z0-9][a-z0-9_-]*$/;
 

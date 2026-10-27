@@ -66,7 +66,8 @@ Run these from the repository root, in this order:
 5. The Pages job `publish-benchmark-cards` runs
    `scripts/render_share_images.py --catalog` on the validated
    `site/data/benchmark-index.json` and pushes one `<slug>.png` per catalog
-   benchmark to the `cards` branch of `ktwu01/benchmark-radar-cards`. Each
+   benchmark to the `cards` branch of `ktwu01/benchmark-radar-cards`, which
+   GitHub Pages serves at `https://cards.benchmark-radar.org/<slug>.png`. Each
    benchmark's Share button (`site/assets/share-card.js`) and its static page's
    `og:image` load that card. To change a card, fix the catalog record, not
    the image.
