@@ -3254,6 +3254,37 @@ def test_huggingface_rejects_a_future_creation_date_even_when_modified_now(monke
     assert config["_future_rejections"] == 1
 
 
+def test_huggingface_keeps_a_record_ahead_only_by_time_zone(monkeypatch):
+    # #907: at 09:42 UTC on 20 Oct it is already 17:42 in Beijing, and a repo
+    # stamped with that local wall-clock time reads as eight hours ahead of a
+    # UTC runner. Time-zone skew is not a malformed date, so the record stays.
+    monkeypatch.setattr(
+        "benchmark_radar.sources.get_json",
+        lambda url, params: [
+            {
+                "id": "org/beijing-upload",
+                "createdAt": "2026-10-20T17:42:00Z",
+                "lastModified": "2026-10-20T17:42:00Z",
+            },
+            {
+                "id": "org/next-local-day",
+                "createdAt": "2026-10-21",
+                "lastModified": "2026-10-21",
+            },
+        ],
+    )
+    config = {
+        "kinds": ["datasets"],
+        "searches": ["benchmark"],
+        "_collection_now": datetime(2026, 10, 20, 9, 42, tzinfo=UTC),
+    }
+
+    items = fetch_huggingface(config, datetime(2026, 10, 18, tzinfo=UTC), 10)
+
+    assert {item.source_id for item in items} == {"org/beijing-upload", "org/next-local-day"}
+    assert "_future_rejections" not in config
+
+
 def test_huggingface_drops_a_short_description_a_later_owner_inherited(monkeypatch):
     """A duplicated Space keeps its parent's one-line card, so the same sentence
     lands on a repo it says nothing about. The parent that published it keeps it."""

@@ -30,6 +30,13 @@ class ConnectorPayloadError(ValueError):
 
 
 FUTURE_TIMESTAMP_TOLERANCE = timedelta(minutes=5)
+# A record is quarantined as future-dated only when it is more than a day ahead
+# of the collection clock. Civil time zones run up to UTC+14, so a record that
+# carries its uploader's local date or wall-clock time (a Beijing upload read
+# as UTC, a date-only field) can sit many hours ahead of a UTC runner while
+# being current. The five-minute query bound above discarded such records
+# (#907); only values a full day ahead are treated as malformed.
+FUTURE_QUARANTINE_TOLERANCE = timedelta(days=1)
 GITHUB_RELEASE_PARSER_VERSION = "github-releases/4"
 
 
@@ -207,11 +214,15 @@ def fetch_first_party_feeds(config: dict[str, Any], since: datetime, limit: int)
     )[:limit]
 
 
-def _latest_allowed(config: dict[str, Any]) -> datetime:
+def _collection_clock(config: dict[str, Any]) -> datetime:
     collection_now = config.get("_collection_now")
     if not isinstance(collection_now, datetime):
         collection_now = datetime.now(UTC)
-    return collection_now.astimezone(UTC) + FUTURE_TIMESTAMP_TOLERANCE
+    return collection_now.astimezone(UTC)
+
+
+def _latest_allowed(config: dict[str, Any]) -> datetime:
+    return _collection_clock(config) + FUTURE_TIMESTAMP_TOLERANCE
 
 
 def _reject_future(
@@ -219,7 +230,8 @@ def _reject_future(
     identity: str,
     *timestamps: datetime | None,
 ) -> bool:
-    if not any(value is not None and value > _latest_allowed(config) for value in timestamps):
+    latest = _collection_clock(config) + FUTURE_QUARANTINE_TOLERANCE
+    if not any(value is not None and value > latest for value in timestamps):
         return False
     identities = config.setdefault("_future_rejection_ids", set())
     identities.add(identity)
