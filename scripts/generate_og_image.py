@@ -146,6 +146,16 @@ def _radar_mark(draw: ImageDraw.ImageDraw, x: int, y: int, size: int) -> None:
     draw.arc(ring, start=-90 + 35, end=0 + 35, fill=ORANGE, width=round(4 * unit))
 
 
+def wordmark(draw: ImageDraw.ImageDraw, x: int, y: int, *, s: int) -> None:
+    """The radar glyph, the name, and a raised TM, shared by every share card."""
+    _radar_mark(draw, x, y, 44 * s)
+    face = mono(22 * s)
+    name_x = x + 58 * s
+    draw.text((name_x, y + 22 * s), "Benchmark Radar", font=face, fill=SITE_INK, anchor="lm")
+    tm_x = name_x + draw.textlength("Benchmark Radar", font=face) + 3 * s
+    draw.text((tm_x, y + 10 * s), "TM", font=font(10 * s, bold=True), fill=SITE_INK, anchor="lm")
+
+
 def _chip(
     draw: ImageDraw.ImageDraw, x: int, y: int, text: str, *, s: int, strong: bool = False
 ) -> int:
@@ -209,10 +219,7 @@ def render(index: dict, output: Path) -> Path:
 
     # Left: what this is, in words a newcomer can repeat.
     left = MARGIN * s
-    _radar_mark(draw, left, 56 * s, 44 * s)
-    draw.text(
-        (left + 58 * s, 78 * s), "Benchmark Radar", font=mono(22 * s), fill=SITE_INK, anchor="lm"
-    )
+    wordmark(draw, left, 56 * s, s=s)
 
     headline = font(54 * s, bold=True)
     for offset, line in enumerate(("Find any", "AI benchmark.")):
