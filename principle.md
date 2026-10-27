@@ -289,7 +289,12 @@ showed 53 of 56 discards since 2026-08-31 came from Zenodo. A live Zenodo record
 created on 2026-10-27 carried an uploader-entered publication date of
 `2026-10-31`, four days ahead, which a one-day tolerance still drops. Another
 carried `2027`, which the parser could not read, so the record was skipped
-without being counted. Count the cases by source, open a few, then fix.
+without being counted. Zenodo's API documentation settles the cause:
+`publication_date` is "Date of publication ... Defaults to current date", set by
+the depositor with no range check, while `created` and `modified` are the
+deposition's own timestamps (https://developers.zenodo.org/#deposit-metadata).
+Count the cases by source, open a few, read the source's API documentation for
+the field, then fix.
 
 The fix follows from those cases. An uploader-entered date can be in the future
 or unreadable; the platform's own creation timestamp (`created`, the date the
