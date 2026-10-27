@@ -276,6 +276,34 @@ without changing their dates; explain any stacking or alternate layout. A mass
 of benchmarks landing on one collection day is a date-provenance defect to
 investigate, not evidence that they were all introduced that day.
 
+## Diagnose from real records, not from a plausible story
+
+Before fixing a bug or designing a feature, pull the actual records it affects
+and read them. A cause that sounds right is still a guess until the data shows
+it. Fixing a guessed cause can leave the real defect in place and still pass the
+tests written for the guess.
+
+Example: ingest discarded "future-dated" records. The first fix assumed time-zone
+skew on Hugging Face and widened the tolerance to one day. The run snapshots
+showed 53 of 56 discards since 2026-08-31 came from Zenodo. A live Zenodo record
+created on 2026-10-27 carried an uploader-entered publication date of
+`2026-10-31`, four days ahead, which a one-day tolerance still drops. Another
+carried `2027`, which the parser could not read, so the record was skipped
+without being counted. Zenodo's API documentation settles the cause:
+`publication_date` is "Date of publication ... Defaults to current date", set by
+the depositor with no range check, while `created` and `modified` are the
+deposition's own timestamps (https://developers.zenodo.org/#deposit-metadata).
+Count the cases by source, open a few, read the source's API documentation for
+the field, then fix.
+
+The fix follows from those cases. An uploader-entered date can be in the future
+or unreadable; the platform's own creation timestamp (`created`, the date the
+upload or repository was opened) cannot. When the source date is in the future
+or unreadable, keep the record, keep the source value as given, and date it by
+`created`, labelled as that basis. Quarantine with a warning only when `created`
+is also in the future, as with a record dated 2050. If a source has no creation
+timestamp, keep the record with an unknown date; never substitute the crawl time.
+
 ## Verify coverage before delivery
 
 - Rebuild the inputs and compute the full population and its sources.
