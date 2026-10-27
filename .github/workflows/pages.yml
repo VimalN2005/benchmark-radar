@@ -231,14 +231,16 @@ jobs:
   # ktwu01/benchmark-radar-cards. GitHub Pages serves that branch at
   # cards.benchmark-radar.org, where each benchmark's Share button and its
   # page's og:image find it by slug. Images in this repository would grow every
-  # clone. The deploy does not wait on this job: a card that is not published
-  # yet only makes the Share dialog fall back to the link.
+  # clone. The deploy waits on this job, so no page goes live naming a card a
+  # social crawler would cache as a 404. Cards are published from main only, so
+  # a workflow_dispatch on another branch skips this job and with it the deploy.
   publish-benchmark-cards:
     needs: build
+    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Create cards writer token
         id: app-token
@@ -268,7 +270,6 @@ jobs:
             --catalog catalog/benchmark-index.json \
             --output-dir cards-out
       - name: Publish the cards
-        if: github.ref == 'refs/heads/main'
         env:
           CARDS_TOKEN: ${{ steps.app-token.outputs.token }}
         shell: bash
@@ -297,11 +298,28 @@ jobs:
             echo "Benchmark cards are already current"
             exit 0
           fi
+          added="$(git diff --cached --name-only --diff-filter=A -- '*.png' | sed -n 1p)"
           git commit -q -m "Benchmark cards for ${GITHUB_SHA::7}"
           git push -q "${remote}" "HEAD:refs/heads/${branch}"
+          # A push is not yet a served file: the cards repository's own Pages
+          # build publishes it a minute or two later, all at once. Only a new
+          # slug's URL can be missing, so one new card answering means every
+          # og:image this deploy names exists.
+          if [[ -n "${added}" ]]; then
+            url="https://$(cat CNAME)/${added}"
+            for attempt in $(seq 1 60); do
+              if curl -fsS -o /dev/null "${url}"; then
+                echo "Published: ${url}"
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "::error::${url} was not served after 10 minutes"
+            exit 1
+          fi
 
   deploy:
-    needs: [build, publish-cli-data, publish-hf-dataset]
+    needs: [build, publish-cli-data, publish-hf-dataset, publish-benchmark-cards]
     permissions:
       pages: write
       id-token: write

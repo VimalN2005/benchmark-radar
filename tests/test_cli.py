@@ -563,6 +563,23 @@ def test_pages_custom_domain_stays_on_the_actions_artifact():
     assert upload["with"]["path"] == "site/"
 
 
+def test_pages_deploy_waits_for_the_benchmark_cards_it_links():
+    """Benchmark pages name their card as og:image (issue #671). A deploy that
+    went live before the card was served would let a crawler cache a 404."""
+    workflow = yaml.safe_load(Path(".github/workflows/pages.yml").read_text(encoding="utf-8"))
+    jobs = workflow["jobs"]
+    assert "publish-benchmark-cards" in jobs["deploy"]["needs"]
+    # Cards publish from main only, so another branch's dispatch skips the
+    # job and, through `needs`, the deploy too.
+    assert jobs["publish-benchmark-cards"]["if"] == "github.ref == 'refs/heads/main'"
+    publish = next(
+        step
+        for step in jobs["publish-benchmark-cards"]["steps"]
+        if step.get("name") == "Publish the cards"
+    )
+    assert "curl -fsS" in publish["run"]
+
+
 def test_daily_radar_persists_only_a_fresh_target_day_snapshot():
     """A queued run must not overlay its full, potentially stale history."""
     workflow_path = Path(".github/workflows/daily-radar.yml")
