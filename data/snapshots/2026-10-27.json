@@ -82115,5 +82115,177 @@
     "taxonomy_version": "sha256:5ee3bd8146ce",
     "watchlisted": 0
   },
+  "share": {
+    "basis": "briefing",
+    "cards": [
+      {
+        "affiliations": [],
+        "authors": [
+          "Weitao Feng",
+          "Hengheng Xiong",
+          "Zihao Zeng",
+          "Jun Chen",
+          "Jiyang Guan",
+          "Xiaofeng Wang",
+          "Jialing Tao",
+          "Hui Xue",
+          "Wei Dong"
+        ],
+        "blurb": "The newly released V³AST-Bench evaluates coding-agent safety through 212 risk tasks in 18 categories.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "V$^3$AST-Bench: Verifiable, Valid, and Versatile Safety Evaluation for Coding Agents",
+        "url": "https://arxiv.org/abs/2610.35188"
+      },
+      {
+        "affiliations": [],
+        "authors": [
+          "Shuofei Qiao",
+          "Xuanguang Pan",
+          "Yijun Chen",
+          "Wendi Feng",
+          "Bin Wu",
+          "Runnan Fang",
+          "Yuqi Zhu",
+          "Shumin Deng",
+          "Emine Yilmaz"
+        ],
+        "blurb": "Δτ-Bench is the strongest example of a recurring pressure in this feed to test agents under changing environments.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "$\\Delta\\tau$-Bench: Pushing Agents Toward a Moving Capability",
+        "url": "https://arxiv.org/abs/2610.34238"
+      },
+      {
+        "affiliations": [
+          "Columbia University",
+          "University of California, Berkeley",
+          "Linux Foundation",
+          "MBZUAI",
+          "McGill University",
+          "Mila – Quebec AI Institute"
+        ],
+        "authors": [
+          "Tianlei Zhu",
+          "Matt White",
+          "Xue Liu",
+          "Xiao-Yang Liu"
+        ],
+        "blurb": "NumTrace is a new benchmark that audits the provenance of numerical claims from financial analyst agents.",
+        "categories": [
+          "benchmark",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "NumTrace: Auditing the Number Provenance of Financial Analyst Agents",
+        "url": "https://arxiv.org/abs/2610.34887"
+      },
+      {
+        "affiliations": [],
+        "authors": [
+          "Md Abu Yusuf",
+          "Oyshi Tabassum Aditi",
+          "Md Faysal Hosain Mazed"
+        ],
+        "blurb": "SentryBench introduces two-sided, cost-sensitive safety evaluation for tool-using agents in public-safety scenarios.",
+        "categories": [
+          "benchmark",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T04:28:35+00:00",
+        "source": "DataCite",
+        "title": "SentryBench: A Cost-Sensitive Benchmark for Adversarial Robustness of Tool-Using LLM Agents in Public-Safety Deployments",
+        "url": "https://doi.org/10.48550/arxiv.2610.34535"
+      },
+      {
+        "affiliations": [
+          "Malnad College of Engineering",
+          "Channabasaveshwara Institute of Technology"
+        ],
+        "authors": [
+          "Kotra Naik D¹",
+          "Ananda Babu",
+          "K C Suhas"
+        ],
+        "blurb": "A newly released PlantSeg audit tests whether visually related image families crossed the benchmark’s training and evaluation partitions.",
+        "categories": [
+          "benchmark",
+          "evaluation"
+        ],
+        "published_at": "2026-10-27T00:00:00+00:00",
+        "source": "Crossref",
+        "title": "Improving Reliability in Plant Disease Semantic Segmentation by Quantifying Benchmark Contamination and Duplicate Family Exposure",
+        "url": "https://doi.org/10.21203/rs.3.rs-11109696/v1"
+      },
+      {
+        "affiliations": [
+          "Georgia Institute of Technology",
+          "Atlanta, USA",
+          "Microsoft Research",
+          "Hong Kong SAR, China"
+        ],
+        "authors": [
+          "Jieyu Zhou",
+          "Zijian Wang",
+          "Yun Wang"
+        ],
+        "blurb": "IntentDelta is a new human-constructed benchmark for agents facing revised user requirements.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "IntentDelta: A Human-Constructed Benchmark for Evolving User Intent",
+        "url": "https://arxiv.org/abs/2610.33806"
+      },
+      {
+        "affiliations": [
+          "["
+        ],
+        "authors": [
+          "Yuting Ning",
+          "Ruijia Cheng",
+          "Sushobhan Ghosh",
+          "Peitong Duan",
+          "HungShi Lin",
+          "Abhishek Sundararajan",
+          "Shreyash Pandey",
+          "Huan Sun",
+          "Jeffrey Nichols",
+          "Eldon Schoop"
+        ],
+        "blurb": "iPrefBench evaluates how personal mobile agents handle underspecified requests in an executable mobile environment.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "iPrefBench: A User-Centric Benchmark for Personalized Mobile Use Agents",
+        "url": "https://arxiv.org/abs/2610.34735"
+      }
+    ],
+    "date": "2026-10-27",
+    "schema_version": 1,
+    "top": [
+      "https://arxiv.org/abs/2610.35188",
+      "https://arxiv.org/abs/2610.34238",
+      "https://arxiv.org/abs/2610.34887"
+    ]
+  },
   "since": "2026-10-25T10:06:51.009331+00:00"
 }
