@@ -35,6 +35,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .cards import CARDS_RAW_URL
 from .corpus import organizations_for_item
 from .http import RequestError, get_json, get_text
 from .snapshots import _write_json, load_snapshots, validate_snapshot
@@ -43,9 +44,6 @@ from .snapshots import _write_json, load_snapshots, validate_snapshot
 # IncompleteRead or a reset connection escapes http.py as itself, not as
 # RequestError, and a failed lookup must never cost the day its snapshot.
 _LOOKUP_ERRORS = (RequestError, OSError, http.client.HTTPException)
-
-CARDS_REPOSITORY = "ktwu01/benchmark-radar-cards"
-CARDS_RAW_URL = f"https://raw.githubusercontent.com/{CARDS_REPOSITORY}/refs/heads"
 
 DEFAULT_LIMIT = 3
 SHARE_SCHEMA_VERSION = 1

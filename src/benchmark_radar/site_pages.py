@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from .cards import benchmark_card_url
 from .feed import SITE_URL
 from .site_links import resource_link
 from .site_shell import SOURCE_LABELS, website_reference
@@ -697,7 +698,9 @@ def _page_html(
 <meta property="og:title" content="{_esc(title)}">
 <meta property="og:description" content="{_esc(description)}">
 <meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{SITE_URL}/assets/og-card.png">
+<meta property="og:image" content="{benchmark_card_url(slug)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" type="application/json" href="{SITE_URL}/data/benchmarks/{slug}.json">
 <script type="application/ld+json">{jsonld}</script>
@@ -713,10 +716,13 @@ def _page_html(
   <div class="record-heading">
     <h1>{_esc(_benchmark_phrase(name))}</h1>
     <a class="record-history-link" href="{interactive}">Explore score history ↗</a>
+    <button type="button" class="secondary-link benchmark-share" data-share-benchmark="{slug}"
+      data-name="{_esc(name)}" hidden>Share card</button>
   </div>
   {body}
 </main>
 {footer}
+<script src="/assets/share-card.js" type="module"></script>
 </body>
 </html>
 """

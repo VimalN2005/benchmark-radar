@@ -4,6 +4,7 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from benchmark_radar import cli
@@ -368,6 +369,46 @@ def test_render_is_deterministic(tmp_path):
 
 def test_a_snapshot_without_cards_renders_nothing(tmp_path):
     assert share.render_day({"date": "2026-10-23"}, tmp_path) == []
+
+
+def _index_record(slug, **extra):
+    return {"slug": slug, "key": f"llm-stats:{slug}", "name": slug.upper(), **extra}
+
+
+def test_catalog_render_writes_one_card_per_benchmark_named_by_slug(tmp_path):
+    index = {
+        "benchmarks": [
+            _index_record(
+                "mmlu-pro",
+                source="llm_stats",
+                publisher="University of Waterloo",
+                released="2024-06-03",
+                description="Ten options per question.",
+                has_paper=True,
+                score_count=134,
+            ),
+            # No date, publisher, description or score: still gets a card.
+            _index_record("bare"),
+        ]
+    }
+    written = share.render_catalog(index, tmp_path, workers=1)
+    assert [path.name for path in written] == ["mmlu-pro.png", "bare.png"]
+    for path in written:
+        with Image.open(path) as image:
+            assert image.size == (1200, 630)
+
+
+def test_catalog_render_is_deterministic(tmp_path):
+    index = {"benchmarks": [_index_record("gpqa", description="Graduate-level questions.")]}
+    first = share.render_catalog(index, tmp_path / "a", workers=1)
+    second = share.render_catalog(index, tmp_path / "b", workers=1)
+    assert first[0].read_bytes() == second[0].read_bytes()
+
+
+def test_catalog_render_refuses_a_slug_that_is_not_a_file_name(tmp_path):
+    index = {"benchmarks": [_index_record("../escape")]}
+    with pytest.raises(ValueError, match="unsafe slug"):
+        share.render_catalog(index, tmp_path, workers=1)
 
 
 def test_no_wrapped_line_is_wider_than_the_text_area():
