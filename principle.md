@@ -287,8 +287,17 @@ Example: ingest discarded "future-dated" records. The first fix assumed time-zon
 skew on Hugging Face and widened the tolerance to one day. The run snapshots
 showed 53 of 56 discards since 2026-08-31 came from Zenodo. A live Zenodo record
 created on 2026-10-27 carried an uploader-entered publication date of
-`2026-10-31`, four days ahead, which a one-day tolerance still drops. Count the
-cases by source, open a few, then fix.
+`2026-10-31`, four days ahead, which a one-day tolerance still drops. Another
+carried `2027`, which the parser could not read, so the record was skipped
+without being counted. Count the cases by source, open a few, then fix.
+
+The fix follows from those cases. An uploader-entered date can be in the future
+or unreadable; the platform's own creation timestamp (`created`, the date the
+upload or repository was opened) cannot. When the source date is in the future
+or unreadable, keep the record, keep the source value as given, and date it by
+`created`, labelled as that basis. Quarantine with a warning only when `created`
+is also in the future, as with a record dated 2050. If a source has no creation
+timestamp, keep the record with an unknown date; never substitute the crawl time.
 
 ## Verify coverage before delivery
 
