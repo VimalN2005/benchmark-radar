@@ -105,12 +105,18 @@ export function openBenchmarkShare({ slug, name, t = identity }) {
 
   const buttons = [];
   if (navigator.share) {
+    // share() must run while the tap still counts as user activation, which a
+    // slow fetch outlasts. The card is fetched as the dialog opens and shared
+    // only once it is here; until then, or without file sharing, the link goes.
+    let file = null;
+    blob()
+      .then((data) => { file = new File([data], `${slug}.png`, { type: "image/png" }); })
+      .catch(() => {});
     buttons.push(action(t("Share…"), async () => {
-      const file = new File([await blob()], `${slug}.png`, { type: "image/png" });
       const payload = { title, text: title, url: pageUrl };
-      if (navigator.canShare?.({ files: [file] })) payload.files = [file];
+      if (file && navigator.canShare?.({ files: [file] })) payload.files = [file];
       await navigator.share(payload);
-    }));
+    }, { needsImage: false }));
   }
   if (navigator.clipboard?.write && window.ClipboardItem) {
     buttons.push(action(t("Copy image"), async (button) => {
