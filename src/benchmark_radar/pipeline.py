@@ -18,7 +18,7 @@ from .benchmark_attention import collect_benchmark_attention
 from .corpus import exact_artifact_keys
 from .describe import clean_card_text, strip_title_echo
 from .models import RadarItem, RadarRun, SourceHealth, digest_evidence_version
-from .sources import FUTURE_TIMESTAMP_TOLERANCE, SOURCE_FETCHERS, collection_method
+from .sources import FUTURE_QUARANTINE_TOLERANCE, SOURCE_FETCHERS, collection_method
 
 TRACKING_PARAMETERS = {"ref", "source", "utm_campaign", "utm_content", "utm_medium", "utm_source"}
 
@@ -544,7 +544,7 @@ def _drop_future_dated_items(
     now: datetime,
 ) -> tuple[list[RadarItem], int]:
     """Quarantine records whose source timestamps are materially in the future."""
-    latest_allowed = now + FUTURE_TIMESTAMP_TOLERANCE
+    latest_allowed = now + FUTURE_QUARANTINE_TOLERANCE
     accepted = [
         item
         for item in items

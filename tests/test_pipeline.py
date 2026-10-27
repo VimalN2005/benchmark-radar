@@ -808,6 +808,35 @@ def test_pipeline_quarantines_future_dated_records_before_scoring(monkeypatch):
     assert run.selection["suppressed_future_dated"] == 1
 
 
+def test_pipeline_keeps_a_record_one_local_day_ahead_in_utc_plus_eight(monkeypatch):
+    # #907: a record carrying its uploader's next calendar day in UTC+8 is
+    # current, not future-dated, and must not leave the corpus.
+    ahead = item(
+        source="Hugging Face",
+        source_id="org/ahead",
+        url="https://huggingface.co/datasets/org/ahead",
+        published_at=datetime(2026, 10, 21, 0, tzinfo=UTC),
+    )
+    pipeline = __import__("benchmark_radar.pipeline", fromlist=["SOURCE_FETCHERS"])
+    monkeypatch.setitem(pipeline.SOURCE_FETCHERS, "huggingface", lambda c, s, n: [ahead])
+    config = {
+        "radar": {
+            "lookback_hours": 48,
+            "max_items_per_source": 10,
+            "report_limit": 10,
+            "minimum_score": 0,
+        },
+        "taxonomy": {"benchmark": ["benchmark"]},
+        "sources": {"huggingface": {"enabled": True, "required": True}},
+    }
+
+    run = run_pipeline(config, datetime(2026, 10, 20, 17, tzinfo=UTC))
+
+    assert [record.source_id for record in run.items] == ["org/ahead"]
+    assert run.health[0].error is None
+    assert run.selection["suppressed_future_dated"] == 0
+
+
 def test_pipeline_accounts_for_future_records_rejected_inside_a_connector(monkeypatch):
     current = item(
         source="Hugging Face",
