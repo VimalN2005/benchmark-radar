@@ -860,6 +860,44 @@ def test_zenodo_records_preserve_doi_and_upstream_metadata(monkeypatch):
     assert items[0].metrics == {"downloads": 13.0, "views": 21.0}
 
 
+def test_zenodo_keeps_records_whose_depositor_chose_a_future_or_bare_year_date(monkeypatch):
+    # #907: live records 23680549 and 23673366 carried publication_date
+    # 2026-10-31 and 2027 on deposits created on 26-27 Oct. The depositor may
+    # set any date, so the deposition's created time dates the record instead.
+    def deposit(recid: str, publication_date: str, created: str) -> dict:
+        return {
+            "recid": recid,
+            "created": created,
+            "updated": created,
+            "links": {"self_html": f"https://zenodo.org/records/{recid}"},
+            "metadata": {"title": f"Record {recid}", "publication_date": publication_date},
+        }
+
+    payload = {
+        "hits": {
+            "hits": [
+                deposit("23680549", "2026-10-31", "2026-10-27T02:01:03Z"),
+                deposit("23673366", "2027", "2026-10-26T08:00:00Z"),
+            ]
+        }
+    }
+    monkeypatch.setattr("benchmark_radar.sources.get_json", lambda url, **kwargs: payload)
+    config = {
+        "searches": ["benchmark"],
+        "max_requests": 1,
+        "_collection_now": datetime(2026, 10, 27, 2, 11, tzinfo=UTC),
+    }
+
+    items = fetch_zenodo_records(config, datetime(2026, 10, 25, tzinfo=UTC), 10)
+
+    assert {item.source_id: item.published_at for item in items} == {
+        "23680549": datetime(2026, 10, 27, 2, 1, 3, tzinfo=UTC),
+        "23673366": datetime(2026, 10, 26, 8, tzinfo=UTC),
+    }
+    assert items[0].raw["metadata"]["publication_date"] in {"2026-10-31", "2027"}
+    assert "_future_rejections" not in config
+
+
 def _deposit(recid: str, title: str, description: str, creators: list[str], day: int) -> dict:
     return {
         "recid": recid,
