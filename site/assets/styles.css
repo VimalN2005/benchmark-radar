@@ -7421,7 +7421,7 @@ a.radar-source:hover {
   color: var(--ink);
 }
 
-/* GitHub stars above 100 and above 1,000 (see evidenceCard). */
+/* Light and strong gold tiers by published counts (see CARD_TIER_THRESHOLDS). */
 .radar-card.stars-100 {
   border-left: 3px solid #e2c56b;
   background: #fdf8e9;

@@ -2515,6 +2515,31 @@ function recordFacts(item, { quietUnreported = false } = {}) {
   );
 }
 
+
+// A card is tinted gold by a count its source published (issue #994): the
+// light tint at the first threshold, the strong tint at the second. Downloads
+// need ten times the count, since any script that pulls a dataset adds one
+// (rubric.py saturates downloads at 10x stars for the same reason). The tint
+// reports a count; it is not a quality judgement.
+const CARD_TIER_THRESHOLDS = {
+  stars: [100, 1000],
+  likes: [100, 1000],
+  upvotes: [100, 1000],
+  votes: [100, 1000],
+  citations: [100, 1000],
+  downloads: [1000, 10000],
+};
+
+function cardTierClass(item) {
+  let tier = 0;
+  for (const [key, [light, strong]] of Object.entries(CARD_TIER_THRESHOLDS)) {
+    const value = Number(item.metrics?.[key]);
+    if (value > strong) return " stars-1000";
+    if (value > light) tier = 1;
+  }
+  return tier ? " stars-100" : "";
+}
+
 function safeHttpUrl(value) {
   try {
     const url = new URL(String(value));
@@ -11074,11 +11099,7 @@ function evidenceCard(item, day) {
   const { name, subtitle } = splitBenchmarkTitle(fullTitle);
   const categories = (item.categories || []).slice(0, 3).map(titleCase);
   const sourceHref = safeHttpUrl(item.url);
-  // A repository past 100 or 1,000 GitHub stars is tinted gold. The tint
-  // reports a count the source published; it is not a quality judgement.
-  const stars = Number(item.metrics?.stars);
-  const tier = stars > 1000 ? " stars-1000" : stars > 100 ? " stars-100" : "";
-  return element("article", { className: `record-card radar-card${tier}` }, [
+  return element("article", { className: `record-card radar-card${cardTierClass(item)}` }, [
     element("div", { className: "radar-rail" }, [
       sourceChip(item, sourceHref),
       railEvent(item).verb
