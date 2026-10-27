@@ -276,6 +276,20 @@ without changing their dates; explain any stacking or alternate layout. A mass
 of benchmarks landing on one collection day is a date-provenance defect to
 investigate, not evidence that they were all introduced that day.
 
+## Diagnose from real records, not from a plausible story
+
+Before fixing a bug or designing a feature, pull the actual records it affects
+and read them. A cause that sounds right is still a guess until the data shows
+it. Fixing a guessed cause can leave the real defect in place and still pass the
+tests written for the guess.
+
+Example: ingest discarded "future-dated" records. The first fix assumed time-zone
+skew on Hugging Face and widened the tolerance to one day. The run snapshots
+showed 53 of 56 discards since 2026-08-31 came from Zenodo. A live Zenodo record
+created on 2026-10-27 carried an uploader-entered publication date of
+`2026-10-31`, four days ahead, which a one-day tolerance still drops. Count the
+cases by source, open a few, then fix.
+
 ## Verify coverage before delivery
 
 - Rebuild the inputs and compute the full population and its sources.
