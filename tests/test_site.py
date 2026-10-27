@@ -3220,6 +3220,8 @@ def test_issue_1002_trends_table_uses_a_local_accessible_scroll_region():
     assert "overflow-x: auto;" in trends_rule
     assert "overscroll-behavior-inline: contain;" in trends_rule
     assert "scrollbar-width: thin;" in trends_rule
+    focus_rule = _css_rule(styles, ".direction-trends-table:focus-visible {")
+    assert "outline: 2px solid var(--blue);" in focus_rule
     assert '"Trends table": "趋势表格"' in script
     assert "body {\n  overflow-x: clip;" in styles
 
