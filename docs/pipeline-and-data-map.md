@@ -63,6 +63,15 @@ Run these from the repository root, in this order:
    CSV, Markdown, and badge files under `site/data/`. Pages then runs
    `scripts/generate_og_image.py` and `scripts/build_logo_registry.py` before
    tests and deployment.
+5. The Pages job `publish-benchmark-cards` runs
+   `scripts/render_share_images.py --catalog` on the validated
+   `site/data/benchmark-index.json` and pushes one `<slug>.png` per catalog
+   benchmark to the `cards` branch of `ktwu01/benchmark-radar-cards`, which
+   GitHub Pages serves at `https://cards.benchmark-radar.org/<slug>.png`. Each
+   benchmark's Share button (`site/assets/share-card.js`) and its static page's
+   `og:image` load that card. The deploy waits for this job, which waits until
+   a newly added card is served, so no page names a card that does not exist.
+   To change a card, fix the catalog record, not the image.
 
 Most `site/data/` files and `data/kw_bench_classifications.jsonl` are derived
 and gitignored. Their absence in a fresh checkout is normal. Never patch them

@@ -48,6 +48,8 @@ on:
       # layer succeeds, merges, and changes nothing that anyone can see.
       - "scripts/generate_og_image.py"
       - "scripts/generate_saturation_og_image.py"
+      # Draws every benchmark's share card, published by publish-benchmark-cards.
+      - "scripts/render_share_images.py"
       - "src/benchmark_radar/export.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
@@ -135,6 +137,13 @@ jobs:
           path: site/data/hf_dataset/
           if-no-files-found: error
           retention-days: 1
+      - name: Upload catalog index for share cards
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark-index
+          path: site/data/benchmark-index.json
+          if-no-files-found: error
+          retention-days: 1
       - name: Remove CLI archive from Pages artifact
         run: rm site/data/cli/benchmark-radar-data.zip
       - name: Configure Pages
@@ -217,8 +226,101 @@ jobs:
           print(f"Successfully synced dataset to https://huggingface.co/datasets/{repo_id}")
           '
 
+  # Issue #671: one share card per catalog benchmark, drawn from the index this
+  # build validated and pushed to the `cards` branch of
+  # ktwu01/benchmark-radar-cards. GitHub Pages serves that branch at
+  # cards.benchmark-radar.org, where each benchmark's Share button and its
+  # page's og:image find it by slug. Images in this repository would grow every
+  # clone. The deploy waits on this job, so no page goes live naming a card a
+  # social crawler would cache as a 404. Cards are published from main only, so
+  # a workflow_dispatch on another branch skips this job and with it the deploy.
+  publish-benchmark-cards:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Create cards writer token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RADAR_APP_ID }}
+          private-key: ${{ secrets.RADAR_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: benchmark-radar-cards
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download validated catalog index
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: benchmark-index
+          path: catalog
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      # Pillow, which draws the cards, is in the dev extra.
+      - name: Install
+        run: python -m pip install '.[dev]'
+      - name: Render one card per benchmark
+        run: |
+          python scripts/render_share_images.py \
+            --catalog catalog/benchmark-index.json \
+            --output-dir cards-out
+      - name: Publish the cards
+        env:
+          CARDS_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch="cards"
+          remote="https://x-access-token:${CARDS_TOKEN}@github.com/ktwu01/benchmark-radar-cards.git"
+          if git ls-remote --exit-code --heads "${remote}" "${branch}" > /dev/null; then
+            git clone -q --depth 1 --branch "${branch}" "${remote}" cards
+          else
+            git init -q -b "${branch}" cards
+          fi
+          # Copied over, never mirrored: a card someone already posted keeps
+          # its URL after its benchmark leaves the catalog. The renderer is
+          # deterministic, so only cards whose facts changed make a diff.
+          cp cards-out/*.png cards/
+          cd cards
+          # GitHub Pages serves this branch at the domain in CNAME; .nojekyll
+          # skips a Jekyll build that would only copy thousands of images.
+          python -c 'from benchmark_radar.cards import CARDS_DOMAIN; print(CARDS_DOMAIN)' > CNAME
+          touch .nojekyll
+          git config user.name "benchmark-radar[bot]"
+          git config user.email "benchmark-radar[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --quiet; then
+            echo "Benchmark cards are already current"
+            exit 0
+          fi
+          added="$(git diff --cached --name-only --diff-filter=A -- '*.png' | sed -n 1p)"
+          git commit -q -m "Benchmark cards for ${GITHUB_SHA::7}"
+          git push -q "${remote}" "HEAD:refs/heads/${branch}"
+          # A push is not yet a served file: the cards repository's own Pages
+          # build publishes it a minute or two later, all at once. Only a new
+          # slug's URL can be missing, so one new card answering means every
+          # og:image this deploy names exists.
+          if [[ -n "${added}" ]]; then
+            url="https://$(cat CNAME)/${added}"
+            for attempt in $(seq 1 60); do
+              if curl -fsS -o /dev/null "${url}"; then
+                echo "Published: ${url}"
+                exit 0
+              fi
+              sleep 10
+            done
+            echo "::error::${url} was not served after 10 minutes"
+            exit 1
+          fi
+
   deploy:
-    needs: [build, publish-cli-data, publish-hf-dataset]
+    needs: [build, publish-cli-data, publish-hf-dataset, publish-benchmark-cards]
     permissions:
       pages: write
       id-token: write

@@ -31,9 +31,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from .cards import benchmark_card_url
 from .feed import SITE_URL
 from .site_links import resource_link
-from .site_shell import SHARE_CARD_META, SOURCE_LABELS, website_reference
+from .site_shell import SHARE_CARD_META, SOURCE_LABELS, share_card_meta, website_reference
 
 DEFAULT_SHARD_DIR = Path("site/data/benchmarks")
 DEFAULT_PAGES_DIR = Path("site/benchmarks")
@@ -697,7 +698,7 @@ def _page_html(
 <meta property="og:title" content="{_esc(title)}">
 <meta property="og:description" content="{_esc(description)}">
 <meta property="og:url" content="{canonical}">
-{SHARE_CARD_META}
+{share_card_meta(benchmark_card_url(slug))}
 <link rel="alternate" type="application/json" href="{SITE_URL}/data/benchmarks/{slug}.json">
 <script type="application/ld+json">{jsonld}</script>
 <script type="application/ld+json">{_breadcrumb_jsonld(slug, name)}</script>
@@ -712,10 +713,13 @@ def _page_html(
   <div class="record-heading">
     <h1>{_esc(_benchmark_phrase(name))}</h1>
     <a class="record-history-link" href="{interactive}">Explore score history ↗</a>
+    <button type="button" class="secondary-link benchmark-share" data-share-benchmark="{slug}"
+      data-name="{_esc(name)}" hidden>Share card</button>
   </div>
   {body}
 </main>
 {footer}
+<script src="/assets/share-card.js" type="module"></script>
 </body>
 </html>
 """

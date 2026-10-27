@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from benchmark_radar.cards import benchmark_card_url
 from benchmark_radar.feed import SITE_URL
 from benchmark_radar.site_pages import (
     benchmark_page_urls,
@@ -204,20 +205,25 @@ def test_page_has_unique_title_and_canonical(tmp_path):
 def test_benchmark_and_directory_pages_declare_the_same_share_card_as_the_homepage(tmp_path):
     # Issue #891: a deep link shared on X should get the same large card as the
     # homepage, so every head carries the image, its size and twitter:image.
+    # A benchmark page carries its own card (issue #671) in the same block.
     output = _generated_pages(tmp_path, _shard("alpha-bench", "Alpha Bench"))
     homepage = Path("site/index.html").read_text(encoding="utf-8")
-    card = f"{SITE_URL}/assets/og-card.png"
-    expected = [
-        f'<meta property="og:image" content="{card}">',
-        '<meta property="og:image:width" content="1200">',
-        '<meta property="og:image:height" content="630">',
-        '<meta name="twitter:card" content="summary_large_image">',
-        f'<meta name="twitter:image" content="{card}">',
-    ]
-    for html in (_page_text(output, "alpha-bench"), (output / "index.html").read_text("utf-8")):
-        for tag in expected:
-            assert tag in html
-            assert tag in homepage
+
+    def expected(card):
+        return [
+            f'<meta property="og:image" content="{card}">',
+            '<meta property="og:image:width" content="1200">',
+            '<meta property="og:image:height" content="630">',
+            '<meta name="twitter:card" content="summary_large_image">',
+            f'<meta name="twitter:image" content="{card}">',
+        ]
+
+    site_card = f"{SITE_URL}/assets/og-card.png"
+    for tag in expected(site_card):
+        assert tag in homepage
+        assert tag in (output / "index.html").read_text("utf-8")
+    for tag in expected(benchmark_card_url("alpha-bench")):
+        assert tag in _page_text(output, "alpha-bench")
 
 
 def test_interactive_view_link_lands_on_saturation_with_the_slug(tmp_path):
@@ -227,6 +233,25 @@ def test_interactive_view_link_lands_on_saturation_with_the_slug(tmp_path):
     # the root, which opens the default Today view and cannot resolve the slug.
     assert 'href="https://benchmark-radar.org/saturation/?lfrontier=alpha-bench"' in page
     assert "?lfrontier=alpha-bench" not in page.replace("/saturation/?lfrontier=alpha-bench", "")
+
+
+def test_page_previews_and_shares_its_own_benchmark_card(tmp_path):
+    output = _generated_pages(tmp_path, _shard("gpqa", "GPQA <Diamond>"))
+    html = _page_text(output, "gpqa")
+    card = "https://cards.benchmark-radar.org/gpqa.png"
+    assert f'<meta property="og:image" content="{card}">' in html
+    # Hidden until share-card.js wakes it, so no reader meets a dead control.
+    button = re.search(r"<button[^>]*data-share-benchmark=[^>]*>", html).group(0)
+    assert 'data-share-benchmark="gpqa"' in button
+    assert 'data-name="GPQA &lt;Diamond&gt;"' in button
+    assert " hidden" in button
+    assert '<script src="/assets/share-card.js" type="module"></script>' in html
+
+
+def test_card_urls_agree_between_the_build_and_the_browser():
+    script = Path("site/assets/share-card.js").read_text(encoding="utf-8")
+    base = re.search(r'CARDS_URL =\s*"([^"]+)"', script).group(1)
+    assert benchmark_card_url("gpqa") == f"{base}/gpqa.png"
 
 
 def test_description_is_present_and_derived_from_the_shard(tmp_path):
@@ -366,7 +391,8 @@ def test_values_are_escaped_and_cannot_inject_markup(tmp_path):
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in page
     assert "<img src=x onerror" not in page
     assert "payload</script>" not in page
-    assert page.count("</script>") == 5  # two JSON-LD blocks, chrome data and two scripts
+    # two JSON-LD blocks, chrome data, two chrome scripts and share-card.js
+    assert page.count("</script>") == 6
 
 
 def test_no_placeholder_text_for_missing_fields(tmp_path):

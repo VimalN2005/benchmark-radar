@@ -1177,6 +1177,17 @@ const I18N = {
     "Agent prompt": "给编程智能体的提示词",
     "Read the setup guide": "查看安装指南",
     "Share Benchmark Radar": "分享 Benchmark Radar",
+    "Share card": "分享卡片",
+    "Share {name} as a card": "将 {name} 分享为卡片",
+    "Share {name}": "分享 {name}",
+    "{name} on Benchmark Radar": "Benchmark Radar 上的 {name}",
+    "Share card for {name}": "{name} 的分享卡片",
+    "Share…": "分享…",
+    "Copy image": "复制图片",
+    "Copy link": "复制链接",
+    "Post on X ↗": "发布到 X ↗",
+    "That did not work here. Copy the link instead.": "此处无法完成，请改为复制链接。",
+    "This benchmark's card is not ready yet. You can still share its link.": "这个 benchmark 的卡片还没生成，你仍然可以分享它的链接。",
     Share: "分享",
     Copied: "已复制",
     Contact: "联系作者",
@@ -8468,6 +8479,21 @@ function renderCatalogShell(board, { eyebrow, heading, message, subline }) {
 // drew the first frame.
 let catalogRenderSeq = 0;
 
+// Every catalog benchmark has a share card (issue #671). The module loads on
+// the first press, so a reader who never shares never downloads it.
+function benchmarkShareButton(record) {
+  const button = element("button", {
+    className: "secondary-link benchmark-share",
+    text: t("Share card"),
+    attrs: { type: "button", "aria-label": t("Share {name} as a card", { name: record.name }) },
+  });
+  button.addEventListener("click", async () => {
+    const { openBenchmarkShare } = await import("./share-card.js");
+    openBenchmarkShare({ slug: record.slug, name: record.name, t });
+  });
+  return button;
+}
+
 function renderCatalogBenchmark(board, record) {
   const meta = catalogSourceMeta(record.source);
   // One title, one metadata line. The eyebrow ("Catalog catalog record") and
@@ -8479,6 +8505,8 @@ function renderCatalogBenchmark(board, record) {
     subline: meta.name,
     message: t("Loading benchmark details…"),
   });
+  const infoHost = byId("frontier-heading-info");
+  if (infoHost) replaceChildren(infoHost, [benchmarkShareButton(record)]);
   const container = byId("frontier-catalog");
   const renderToken = ++catalogRenderSeq;
   loadBenchmarkShard(record.slug).then((shard) => {
