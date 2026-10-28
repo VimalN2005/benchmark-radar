@@ -2022,7 +2022,7 @@ async function onPopState() {
 // translates through data-i18n.
 const VIEW_SEO = {
   today: {
-    title: "AI Benchmark Search Engine & Database | Benchmark Radar",
+    title: "Benchmark Radar: Search Engine for AI Benchmarks & Evals",
     description:
       "Search an open database of AI, LLM, agent, multimodal and AI-for-science benchmarks, each with its own page carrying the paper, code, dataset and scores.",
     canonical: "/",
