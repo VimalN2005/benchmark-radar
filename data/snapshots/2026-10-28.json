@@ -78636,5 +78636,200 @@
     "taxonomy_version": "sha256:5ee3bd8146ce",
     "watchlisted": 0
   },
+  "share": {
+    "basis": "briefing",
+    "cards": [
+      {
+        "affiliations": [
+          "Department of Radiation Oncology, Henry Ford Health, Detroit, Michigan, USA",
+          "Department of Radiology, College of Human Medicine, Michigan State University, East Lansing, Michigan, USA"
+        ],
+        "authors": [
+          "Humza Nusrat",
+          "Kundan Thind"
+        ],
+        "blurb": "A new release in this feed, OpenGray, evaluates whether radiotherapy-planning agents make the correct decision, not merely whether they produce a favorable dose plan.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "dataset",
+          "agentic"
+        ],
+        "published_at": "2026-10-28T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "OpenGray: a benchmark for evaluating the decisions of radiotherapy planning agents",
+        "url": "https://arxiv.org/abs/2610.37081"
+      },
+      {
+        "affiliations": [
+          "Faculty of Information Technology",
+          "Czech Technical University in Prague"
+        ],
+        "authors": [
+          "Alexander Kovalenko",
+          "Artem Redchych"
+        ],
+        "blurb": "The newly released EffectWorld represents each agent tool by what it reads, writes, and changes, including whether repeated calls are safe.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "dataset"
+        ],
+        "published_at": "2026-10-28T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "Small agents should know what their tools do",
+        "url": "https://arxiv.org/abs/2610.35981"
+      },
+      {
+        "affiliations": [],
+        "authors": [
+          "Sinuo Wang",
+          "Wentao Zhao",
+          "Jiacheng Lu",
+          "Rui Sun",
+          "Beidi Luan",
+          "Qiming Shi",
+          "Jing Li",
+          "Daxin Jiang",
+          "Zuo Bai"
+        ],
+        "blurb": "LiveSearch, newly discovered by this feed, stores financial-search questions as executable verifier programs.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "dataset",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T12:55:52+00:00",
+        "source": "XBsleepy",
+        "title": "LiveSearch: Questions as Executable Verifier Code for a Live Benchmark of Professional-Source Financial Search Agents",
+        "url": "https://arxiv.org/abs/2610.37166v1"
+      },
+      {
+        "affiliations": [],
+        "authors": [
+          "Yunlong Wang",
+          "Alyssa Wu",
+          "Cuiyun Gao",
+          "Jia Feng",
+          "Songyuanyi Lu",
+          "Zhichao Hu"
+        ],
+        "blurb": "FeatureArc, newly discovered by this feed, evaluates coding agents across successive extensions of the same feature.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "agentic"
+        ],
+        "published_at": "2026-10-27T15:45:50+00:00",
+        "source": "XBsleepy",
+        "title": "FeatureArc: Benchmarking Coding Agents on Evolving Features",
+        "url": "https://arxiv.org/abs/2610.37434v1"
+      },
+      {
+        "affiliations": [
+          "Shanghai AI Laboratory",
+          "Fudan University Shanghai Jiao Tong University",
+          "University of Science and Technology of China Tsinghua University"
+        ],
+        "authors": [
+          "Jiawei Zhou",
+          "Bo Peng",
+          "Yuxuan Huang",
+          "Ming Zhang",
+          "Youbang Sun",
+          "Xiang Wang",
+          "Chaochao Lu"
+        ],
+        "blurb": "A new release introduces Bipartite Attribution, or BiPA, for auditing agent skill optimizers.",
+        "categories": [
+          "benchmark",
+          "agentic"
+        ],
+        "published_at": "2026-10-28T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "Does Your Generalist Skill Optimizer Really Incentivize Agentic Tasks? Rethinking Skill Optimization via Bipartite Attribution",
+        "url": "https://arxiv.org/abs/2610.37201"
+      },
+      {
+        "affiliations": [
+          "Microsoft Research India",
+          "IIT Gandhinagar"
+        ],
+        "authors": [
+          "Manan Uppadhyay",
+          "Himanshu Beniwal",
+          "Prashant Kodali",
+          "Sunayana Sitaram"
+        ],
+        "blurb": "A new audit in this feed examines 51 multilingual benchmarks covering 242 datasets and 219 languages.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "dataset",
+          "data_quality"
+        ],
+        "published_at": "2026-10-28T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "The State and Fate of Multilingual, Contextual Evaluation in the NLP World",
+        "url": "https://arxiv.org/abs/2610.36990"
+      },
+      {
+        "affiliations": [
+          "Department of Psychology",
+          "University of California, Los Angeles"
+        ],
+        "authors": [
+          "Kiant\\'e Fernandez",
+          "Caitlin Chen",
+          "Jialu Zhou",
+          "Bartek Sadowski",
+          "Anthony C. Miceli",
+          "Ian Krajbich",
+          "Kianté Fernandez"
+        ],
+        "blurb": "The new CogArena benchmark runs agents through ten behavioral experiments in a standard web browser, using the same visual stimuli and response interfaces encountered by human participants instead of converting the experiments into text prompts.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "dataset",
+          "agentic"
+        ],
+        "published_at": "2026-10-28T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "CogArena: Benchmarking Multimodal Agents on Interactive Behavioral Experiments",
+        "url": "https://arxiv.org/abs/2610.36484"
+      },
+      {
+        "affiliations": [],
+        "authors": [
+          "Zhiheng Qian",
+          "Junhao Du",
+          "Jing Peng",
+          "Hanqi Li",
+          "Kunyang Peng",
+          "Feng Xue",
+          "Kai Yu"
+        ],
+        "blurb": "The newly released ETC-Bench evaluates transcript canonicalization: converting different written forms of the same speech into one comparison form when the audio cannot determine the difference.",
+        "categories": [
+          "benchmark",
+          "evaluation",
+          "agentic"
+        ],
+        "published_at": "2026-10-28T04:00:00+00:00",
+        "source": "arXiv",
+        "title": "ETC-Bench: A Multilingual Benchmark for Evaluation-Side Transcript Canonicalization",
+        "url": "https://arxiv.org/abs/2610.36527"
+      }
+    ],
+    "date": "2026-10-28",
+    "schema_version": 1,
+    "top": [
+      "https://arxiv.org/abs/2610.37081",
+      "https://arxiv.org/abs/2610.35981",
+      "https://arxiv.org/abs/2610.37166v1"
+    ]
+  },
   "since": "2026-10-26T10:53:28.779592+00:00"
 }
